@@ -1,6 +1,7 @@
 const games = [
     { id: 1, title: "Super Mario Pixel", genre: "platformer", genreLabel: "Platformer", size: "Browser", plays: "99.9k", image: "img/supermario.jpg", description: "Game platformer klasik Super Mario versi pixel. Lompat, kumpulkan koin, dan kalahkan musuh.", playable: true, url: "mario-game.html" },
-    { id: 2, title: "Pacman Pixel", genre: "retro", genreLabel: "Retro", size: "Browser", plays: "88.5k", image: "https://img.itch.zone/aW1nLzE5MjA4MTQ5LnBuZw==/original/ZX%2FlHq.png", description: "Game klasik Pacman versi pixel. Makan semua titik dan hindari hantu.", playable: true, url: "pacman-game.html" }
+    { id: 2, title: "Pacman Pixel", genre: "retro", genreLabel: "Retro", size: "Browser", plays: "88.5k", image: "https://img.itch.zone/aW1nLzE5MjA4MTQ5LnBuZw==/original/ZX%2FlHq.png", description: "Game klasik Pacman versi pixel. Makan semua titik dan hindari hantu.", playable: true, url: "pacman-game.html" },
+    { id: 3, title: "Tetris Pixel", genre: "puzzle", genreLabel: "Puzzle", size: "Browser", plays: "76.2k", image: "img/tetris.webp", description: "Game puzzle klasik Tetris. Susun blok untuk menghilangkan baris. Semakin tinggi skor, semakin cepat!", playable: true, url: "tetris-game.html" }
 ];
 
 const gamesGrid = document.getElementById('gamesGrid');

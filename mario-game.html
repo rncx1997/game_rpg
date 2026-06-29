@@ -2,10 +2,10 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Super Mario Pixel - Main Game</title>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; -webkit-user-select: none; }
         body {
             background: #000;
             display: flex;
@@ -14,76 +14,183 @@
             min-height: 100vh;
             font-family: 'Courier New', monospace;
             overflow: hidden;
+            touch-action: none;
         }
         .game-wrapper {
+            position: relative;
+            width: 100%;
+            max-width: 800px;
             text-align: center;
-        }
-        canvas {
-            display: block;
-            margin: 0 auto;
-            border: 3px solid #333;
-            image-rendering: pixelated;
-            image-rendering: crisp-edges;
-            max-width: 100vw;
-            max-height: 90vh;
         }
         .game-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 10px 20px;
+            padding: 8px 14px;
             background: #1a1a2e;
-            border: 3px solid #333;
+            border: 2px solid #333;
             border-bottom: none;
             color: #fff;
-            font-size: 16px;
+            font-size: 14px;
             font-weight: bold;
         }
         .game-header .score { color: #fbbf24; }
         .game-header .coins { color: #f59e0b; }
         .game-header .lives { color: #ef4444; }
+        canvas {
+            display: block;
+            width: 100%;
+            height: auto;
+            aspect-ratio: 800 / 500;
+            border: 2px solid #333;
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+            background: #000;
+        }
         .controls-info {
-            color: #94a3b8;
-            font-size: 12px;
-            margin-top: 8px;
-            padding: 8px;
+            color: #666;
+            font-size: 11px;
+            padding: 6px;
             background: #1a1a2e;
             border: 1px solid #333;
+            border-top: none;
         }
         .controls-info kbd {
             background: #333;
             padding: 2px 6px;
             border-radius: 3px;
-            color: #fff;
-            font-size: 11px;
+            color: #aaa;
+            font-size: 10px;
         }
         .back-link {
             display: inline-block;
-            margin-top: 10px;
+            margin-top: 8px;
             color: #7c3aed;
             text-decoration: none;
-            font-size: 14px;
+            font-size: 13px;
         }
         .back-link:hover { text-decoration: underline; }
-        @media (max-width: 500px) {
-            .game-header { font-size: 12px; padding: 6px 10px; }
-            .controls-info { font-size: 10px; }
+
+        /* Joystick overlay - only shown on touch devices */
+        .touch-controls {
+            display: none;
+            position: absolute;
+            bottom: 50px;
+            left: 0;
+            right: 0;
+            padding: 0 16px;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .dpad {
+            position: absolute;
+            bottom: 0;
+            left: 20px;
+            display: flex;
+            gap: 12px;
+            pointer-events: auto;
+        }
+
+        .jump-btn {
+            position: absolute;
+            bottom: 0;
+            right: 20px;
+            pointer-events: auto;
+        }
+
+        .ctrl-btn {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            border: 2px solid rgba(255, 255, 255, 0.4);
+            background: rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 26px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            touch-action: none;
+            transition: background 0.1s, transform 0.1s;
+            -webkit-tap-highlight-color: transparent;
+            backdrop-filter: blur(2px);
+            cursor: pointer;
+        }
+
+        .ctrl-btn:active,
+        .ctrl-btn.pressed {
+            background: rgba(255, 255, 255, 0.25);
+            transform: scale(0.92);
+            border-color: rgba(255, 255, 255, 0.7);
+        }
+
+        .jump-btn .ctrl-btn {
+            width: 80px;
+            height: 80px;
+            font-size: 18px;
+            background: rgba(37, 99, 235, 0.2);
+            border-color: rgba(37, 99, 235, 0.5);
+            color: #60a5fa;
+            font-weight: bold;
+        }
+
+        .jump-btn .ctrl-btn:active,
+        .jump-btn .ctrl-btn.pressed {
+            background: rgba(37, 99, 235, 0.4);
+            border-color: rgba(37, 99, 235, 0.8);
+        }
+
+        @media (hover: none) and (pointer: coarse) {
+            .touch-controls { display: block; }
+        }
+
+        @media (max-width: 600px) {
+            .game-header { font-size: 11px; padding: 6px 10px; }
+            .game-header span:nth-child(2),
+            .game-header span:nth-child(3) { display: none; }
+            .ctrl-btn { width: 56px; height: 56px; font-size: 22px; }
+            .jump-btn .ctrl-btn { width: 68px; height: 68px; font-size: 15px; }
+            .touch-controls { bottom: 30px; }
+            .back-link { font-size: 11px; }
+        }
+
+        @media (max-width: 400px) {
+            .ctrl-btn { width: 48px; height: 48px; font-size: 18px; }
+            .jump-btn .ctrl-btn { width: 58px; height: 58px; font-size: 13px; }
+            .touch-controls { bottom: 20px; }
+            .dpad { left: 10px; gap: 8px; }
+            .jump-btn { right: 10px; }
         }
     </style>
 </head>
 <body>
     <div class="game-wrapper">
         <div class="game-header">
-            <span>SUPER MARIO <span style="color:#7c3aed;">PIXEL</span></span>
-            <span>SKOR: <span class="score" id="scoreDisplay">0</span></span>
-            <span>KOIN: <span class="coins" id="coinDisplay">0</span></span>
-            <span>NYAWA: <span class="lives" id="livesDisplay">3</span></span>
+            <span>MARIO <span style="color:#7c3aed;">PIXEL</span></span>
+            <span><span class="score" id="scoreDisplay">0</span></span>
+            <span><span class="coins" id="coinDisplay">0</span></span>
+            <span><span class="lives" id="livesDisplay">3</span></span>
         </div>
-        <canvas id="gameCanvas" width="800" height="500"></canvas>
+
+        <div style="position:relative;display:inline-block;width:100%;">
+            <canvas id="gameCanvas" width="800" height="500"></canvas>
+
+            <!-- Touch Controls Overlay -->
+            <div class="touch-controls" id="touchControls">
+                <div class="dpad" id="dpad">
+                    <button class="ctrl-btn" id="btnLeft" aria-label="Kiri">&#x25C0;</button>
+                    <button class="ctrl-btn" id="btnRight" aria-label="Kanan">&#x25B6;</button>
+                </div>
+                <div class="jump-btn" id="jumpBtnContainer">
+                    <button class="ctrl-btn" id="btnJump" aria-label="Lompat">LOM</button>
+                </div>
+            </div>
+        </div>
+
         <div class="controls-info">
             <kbd>&larr;</kbd> <kbd>&rarr;</kbd> Gerak &nbsp;|&nbsp; <kbd>Spasi</kbd> Lompat &nbsp;|&nbsp; <kbd>R</kbd> Restart
         </div>
-        <a href="index.html" class="back-link">&larr; Kembali ke GameRPG</a>
+        <a href="index.html" class="back-link">&larr; Kembali</a>
     </div>
     <script>
         const canvas = document.getElementById('gameCanvas');
@@ -155,7 +262,6 @@
         const LEVEL_WIDTH = 4000;
         const GROUND_Y = 436;
 
-        // Platforms, enemies, coins, pipes, blocks
         let platforms = [];
         let enemies = [];
         let coinList = [];
@@ -173,13 +279,11 @@
             questionBlocks = [];
             flag = null;
 
-            // Ground platforms
             for (let x = 0; x < LEVEL_WIDTH; x += TILE) {
                 platforms.push({ x, y: GROUND_Y, w: TILE, h: TILE, type: 'ground' });
                 platforms.push({ x, y: GROUND_Y + TILE, w: TILE, h: TILE, type: 'ground' });
             }
 
-            // Gaps
             const gaps = [
                 { start: 1400, end: 1500 },
                 { start: 2200, end: 2320 },
@@ -192,7 +296,6 @@
                 return true;
             });
 
-            // Floating platforms
             const floatPlats = [
                 { x: 500, y: 340, w: 4 }, { x: 750, y: 280, w: 3 },
                 { x: 1000, y: 300, w: 4 }, { x: 1300, y: 260, w: 3 },
@@ -206,7 +309,6 @@
                 }
             }
 
-            // Bricks
             const brickPositions = [
                 { x: 350, y: 240 }, { x: 380, y: 240 }, { x: 410, y: 240 },
                 { x: 1100, y: 200 }, { x: 1130, y: 200 },
@@ -219,7 +321,6 @@
                 platforms.push({ x: b.x, y: b.y, w: TILE, h: TILE, type: 'brick' });
             }
 
-            // Question blocks
             const qBlocks = [
                 { x: 350, y: 200 }, { x: 800, y: 240 },
                 { x: 1200, y: 200 }, { x: 1800, y: 200 },
@@ -231,7 +332,6 @@
                 platforms.push({ x: q.x, y: q.y, w: TILE, h: TILE, type: 'question' });
             }
 
-            // Pipes
             const pipePositions = [
                 { x: 600, h: 2 }, { x: 900, h: 3 }, { x: 1500, h: 2 },
                 { x: 2100, h: 3 }, { x: 2800, h: 2 }, { x: 3600, h: 3 }
@@ -244,7 +344,6 @@
                 }
             }
 
-            // Coins
             const coinPositions = [
                 { x: 200, y: 300 }, { x: 250, y: 300 }, { x: 300, y: 300 },
                 { x: 520, y: 280 }, { x: 550, y: 280 },
@@ -263,7 +362,6 @@
                 coinList.push({ x: c.x, y: c.y, w: 16, h: 16, collected: false });
             }
 
-            // Enemies (Goombas)
             const enemyPositions = [
                 { x: 400 }, { x: 700, range: 100 }, { x: 1100 },
                 { x: 1450 }, { x: 1700, range: 120 },
@@ -284,7 +382,6 @@
                 });
             }
 
-            // Flag
             flag = { x: 3900, y: 200 };
         }
 
@@ -312,7 +409,6 @@
             livesSpan.textContent = lives;
         }
 
-        // Collision detection
         function rectCollide(a, b) {
             return a.x < b.x + b.w && a.x + a.w > b.x &&
                    a.y < b.y + b.h && a.y + a.h > b.y;
@@ -321,7 +417,6 @@
         function handleCollisions() {
             mario.onGround = false;
 
-            // Platform collisions
             for (const plat of platforms) {
                 if (!rectCollide(
                     { x: mario.x, y: mario.y, w: mario.width, h: mario.height },
@@ -354,7 +449,6 @@
                 }
             }
 
-            // Coin collection
             for (const c of coinList) {
                 if (c.collected) continue;
                 if (rectCollide(
@@ -368,7 +462,6 @@
                 }
             }
 
-            // Enemy collisions
             for (const e of enemies) {
                 if (!e.alive) continue;
                 if (!rectCollide(
@@ -376,19 +469,16 @@
                     { x: e.x, y: e.y, w: e.w, h: e.h }
                 )) continue;
 
-                // Check if Mario is stomping (coming from above)
                 if (mario.vy > 0 && mario.y + mario.height - e.y < 20) {
                     e.alive = false;
                     mario.vy = JUMP_FORCE / 1.5;
                     score += 200;
                     updateDisplay();
                 } else {
-                    // Mario dies
                     marioHit();
                 }
             }
 
-            // Flag check
             if (flag && rectCollide(
                 { x: mario.x, y: mario.y, w: mario.width, h: mario.height },
                 { x: flag.x, y: flag.y, w: 20, h: 200 }
@@ -396,7 +486,6 @@
                 gameWin = true;
             }
 
-            // Fall off screen
             if (mario.y > 600) {
                 marioHit();
             }
@@ -419,7 +508,6 @@
         function update() {
             if (gameOver || gameWin) return;
 
-            // Input
             if (keys['ArrowLeft'] || keys['a']) {
                 mario.vx = -MOVE_SPEED;
                 mario.facing = -1;
@@ -436,22 +524,17 @@
                 mario.onGround = false;
             }
 
-            // Gravity
             mario.vy += GRAVITY;
             if (mario.vy > 15) mario.vy = 15;
 
-            // Move
             mario.x += mario.vx;
             mario.y += mario.vy;
 
-            // Level bounds
             if (mario.x < 0) mario.x = 0;
             if (mario.x > LEVEL_WIDTH - mario.width) mario.x = LEVEL_WIDTH - mario.width;
 
-            // Collisions
             handleCollisions();
 
-            // Animation
             if (Math.abs(mario.vx) > 1 && mario.onGround) {
                 mario.frameTimer++;
                 if (mario.frameTimer > 6) {
@@ -462,12 +545,10 @@
                 mario.frame = 0;
             }
 
-            // Camera
             cameraX = mario.x - 300;
             if (cameraX < 0) cameraX = 0;
             if (cameraX > LEVEL_WIDTH - 800) cameraX = LEVEL_WIDTH - 800;
 
-            // Enemy AI
             for (const e of enemies) {
                 if (!e.alive) continue;
                 e.x += e.vx;
@@ -477,23 +558,18 @@
             }
         }
 
-        // Drawing functions
         function drawPixelMario(x, y, frame, facing) {
             const p = 2;
-            // Body (red shirt)
             ctx.fillStyle = COLORS.marioRed;
             ctx.fillRect(x + 4 * p, y + 8 * p, 4 * p, 4 * p);
 
-            // Head (skin)
             ctx.fillStyle = COLORS.marioSkin;
             ctx.fillRect(x + 4 * p, y + 2 * p, 4 * p, 4 * p);
 
-            // Hat (red)
             ctx.fillStyle = COLORS.marioRed;
             ctx.fillRect(x + 3 * p, y, 6 * p, 2 * p);
             ctx.fillRect(x + 2 * p, y + 1 * p, 2 * p, 1 * p);
 
-            // Eyes
             ctx.fillStyle = '#000';
             if (facing > 0) {
                 ctx.fillRect(x + 6 * p, y + 3 * p, 1 * p, 1 * p);
@@ -501,11 +577,9 @@
                 ctx.fillRect(x + 5 * p, y + 3 * p, 1 * p, 1 * p);
             }
 
-            // Mustache
             ctx.fillStyle = COLORS.marioBrown;
             ctx.fillRect(x + 4 * p, y + 5 * p, 4 * p, 1 * p);
 
-            // Overalls (blue)
             ctx.fillStyle = COLORS.marioBlue;
             if (frame === 0 || frame === 2) {
                 ctx.fillRect(x + 3 * p, y + 12 * p, 6 * p, 4 * p);
@@ -515,10 +589,8 @@
                 ctx.fillRect(x + 4 * p, y + 12 * p, 6 * p, 4 * p);
             }
 
-            // Legs (brown)
             ctx.fillStyle = COLORS.marioBrown;
             if (!mario.onGround) {
-                // Jumping pose
                 ctx.fillRect(x + 3 * p, y + 16 * p, 2 * p, 2 * p);
                 ctx.fillRect(x + 7 * p, y + 15 * p, 2 * p, 2 * p);
             } else if (frame === 0) {
@@ -532,7 +604,6 @@
                 ctx.fillRect(x + 7 * p, y + 16 * p, 2 * p, 2 * p);
             }
 
-            // Shoes
             ctx.fillStyle = COLORS.marioBrown;
             ctx.fillRect(x + 3 * p, y + 18 * p, 3 * p, 1 * p);
             ctx.fillRect(x + 6 * p, y + 18 * p, 3 * p, 1 * p);
@@ -540,16 +611,12 @@
 
         function drawPixelGoomba(x, y) {
             const p = 2;
-            // Body (brown)
             ctx.fillStyle = COLORS.goomba;
             ctx.fillRect(x + 2 * p, y + 4 * p, 10 * p, 8 * p);
-            // Head
             ctx.fillRect(x + 1 * p, y + 2 * p, 12 * p, 4 * p);
-            // Feet
             ctx.fillStyle = COLORS.goombaDark;
             ctx.fillRect(x + 1 * p, y + 12 * p, 4 * p, 2 * p);
             ctx.fillRect(x + 9 * p, y + 12 * p, 4 * p, 2 * p);
-            // Eyes (white with black pupil)
             ctx.fillStyle = '#fff';
             ctx.fillRect(x + 3 * p, y + 3 * p, 2 * p, 2 * p);
             ctx.fillRect(x + 9 * p, y + 3 * p, 2 * p, 2 * p);
@@ -559,15 +626,12 @@
         }
 
         function draw() {
-            // Sky
             ctx.fillStyle = COLORS.sky;
             ctx.fillRect(0, 0, 800, 500);
 
-            // Save and translate for camera
             ctx.save();
             ctx.translate(-cameraX, 0);
 
-            // Background hills
             ctx.fillStyle = COLORS.hill;
             for (let i = 0; i < 5; i++) {
                 const hx = i * 800 + 100;
@@ -577,7 +641,6 @@
                 ctx.fill();
             }
 
-            // Clouds
             ctx.fillStyle = COLORS.cloud;
             for (let i = 0; i < 8; i++) {
                 const cx = i * 500 + 50;
@@ -587,7 +650,6 @@
                 ctx.fillRect(cx + 20, cy - 20, 20, 10);
             }
 
-            // Bushes
             ctx.fillStyle = COLORS.bush;
             for (let i = 0; i < 6; i++) {
                 const bx = i * 700 + 200;
@@ -597,14 +659,9 @@
                 ctx.fillRect(bx + 20, by - 20, 40, 10);
             }
 
-            // Ground
             for (const plat of platforms) {
                 if (plat.type === 'ground') {
-                    if (plat.y === GROUND_Y) {
-                        ctx.fillStyle = COLORS.ground;
-                    } else {
-                        ctx.fillStyle = COLORS.groundDark;
-                    }
+                    ctx.fillStyle = plat.y === GROUND_Y ? COLORS.ground : COLORS.groundDark;
                     ctx.fillRect(plat.x, plat.y, plat.w, plat.h);
                     if (plat.y === GROUND_Y) {
                         ctx.strokeStyle = COLORS.groundDark;
@@ -614,7 +671,6 @@
                 }
             }
 
-            // Floating bricks
             for (const plat of platforms) {
                 if (plat.type === 'brick') {
                     ctx.fillStyle = COLORS.brick;
@@ -622,7 +678,6 @@
                     ctx.strokeStyle = COLORS.brickLine;
                     ctx.lineWidth = 1;
                     ctx.strokeRect(plat.x, plat.y, plat.w, plat.h);
-                    // Brick pattern
                     ctx.strokeStyle = COLORS.brickLine;
                     ctx.lineWidth = 1;
                     ctx.beginPath();
@@ -634,7 +689,6 @@
                 }
             }
 
-            // Question blocks
             for (const q of questionBlocks) {
                 ctx.fillStyle = q.used ? '#888' : COLORS.block;
                 ctx.fillRect(q.x, q.y, q.w, q.h);
@@ -649,22 +703,17 @@
                 }
             }
 
-            // Pipes
             for (const p of pipes) {
-                // Pipe body
                 ctx.fillStyle = COLORS.pipe;
                 ctx.fillRect(p.x + 2, p.y + TILE, TILE * 2 - 4, (p.h - 1) * TILE);
-                // Pipe top
                 ctx.fillStyle = COLORS.pipeDark;
                 ctx.fillRect(p.x, p.y, TILE * 2, TILE);
                 ctx.fillStyle = COLORS.pipe;
                 ctx.fillRect(p.x + 2, p.y + 2, TILE * 2 - 4, TILE - 4);
-                // Highlight
                 ctx.fillStyle = 'rgba(255,255,255,0.2)';
                 ctx.fillRect(p.x + 4, p.y + 4, 6, TILE - 8);
             }
 
-            // Coins
             for (const c of coinList) {
                 if (c.collected) continue;
                 const pulse = Math.sin(Date.now() / 200 + c.x) * 2;
@@ -678,38 +727,32 @@
                 ctx.fill();
             }
 
-            // Enemies
             for (const e of enemies) {
                 if (!e.alive) continue;
                 drawPixelGoomba(e.x, e.y);
             }
 
-            // Flag pole
             if (flag) {
                 ctx.fillStyle = COLORS.flagPole;
                 ctx.fillRect(flag.x + 8, flag.y, 4, GROUND_Y - flag.y + TILE);
-                // Flag
                 ctx.fillStyle = COLORS.flag;
                 ctx.beginPath();
                 ctx.moveTo(flag.x + 8, flag.y);
                 ctx.lineTo(flag.x + 8 + 40, flag.y + 20);
                 ctx.lineTo(flag.x + 8, flag.y + 40);
                 ctx.fill();
-                // Ball on top
                 ctx.fillStyle = '#2ecc40';
                 ctx.beginPath();
                 ctx.arc(flag.x + 10, flag.y, 6, 0, Math.PI * 2);
                 ctx.fill();
             }
 
-            // Mario
             if (!gameOver) {
                 drawPixelMario(mario.x, mario.y, mario.frame, mario.facing);
             }
 
             ctx.restore();
 
-            // HUD overlay
             if (gameOver) {
                 ctx.fillStyle = 'rgba(0,0,0,0.7)';
                 ctx.fillRect(0, 0, 800, 500);
@@ -744,13 +787,11 @@
             requestAnimationFrame(gameLoop);
         }
 
-        // Input
+        // Keyboard input
         document.addEventListener('keydown', (e) => {
             keys[e.key] = true;
             if (e.key === 'r' || e.key === 'R') {
-                if (gameOver || gameWin) {
-                    resetGame();
-                }
+                if (gameOver || gameWin) resetGame();
             }
             if ((e.key === ' ' || e.key === 'ArrowUp') && !gameOver && !gameWin) {
                 e.preventDefault();
@@ -761,7 +802,68 @@
             keys[e.key] = false;
         });
 
-        // Touch controls for mobile
+        // Touch joystick controls
+        const btnLeft = document.getElementById('btnLeft');
+        const btnRight = document.getElementById('btnRight');
+        const btnJump = document.getElementById('btnJump');
+
+        function setupTouchButton(el, keyDown, keyUp) {
+            const start = (e) => {
+                e.preventDefault();
+                keys[keyDown] = true;
+                if (keyUp) keys[keyUp] = false;
+                el.classList.add('pressed');
+            };
+            const end = (e) => {
+                e.preventDefault();
+                keys[keyDown] = false;
+                el.classList.remove('pressed');
+            };
+
+            el.addEventListener('touchstart', start, { passive: false });
+            el.addEventListener('touchend', end, { passive: false });
+            el.addEventListener('touchcancel', end, { passive: false });
+            el.addEventListener('mousedown', start);
+            el.addEventListener('mouseup', end);
+            el.addEventListener('mouseleave', end);
+        }
+
+        setupTouchButton(btnLeft, 'ArrowLeft', 'ArrowRight');
+        setupTouchButton(btnRight, 'ArrowRight', 'ArrowLeft');
+
+        btnJump.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            keys[' '] = true;
+            btnJump.classList.add('pressed');
+        }, { passive: false });
+
+        btnJump.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            keys[' '] = false;
+            btnJump.classList.remove('pressed');
+        }, { passive: false });
+
+        btnJump.addEventListener('touchcancel', (e) => {
+            keys[' '] = false;
+            btnJump.classList.remove('pressed');
+        });
+
+        btnJump.addEventListener('mousedown', () => {
+            keys[' '] = true;
+            btnJump.classList.add('pressed');
+        });
+
+        btnJump.addEventListener('mouseup', () => {
+            keys[' '] = false;
+            btnJump.classList.remove('pressed');
+        });
+
+        btnJump.addEventListener('mouseleave', () => {
+            keys[' '] = false;
+            btnJump.classList.remove('pressed');
+        });
+
+        // Legacy touch on canvas (swipe left/right, tap jump)
         let touchStartX = 0;
         let touchStartY = 0;
         let touchActive = false;
@@ -772,7 +874,7 @@
             touchStartX = touch.clientX;
             touchStartY = touch.clientY;
             touchActive = true;
-        });
+        }, { passive: false });
 
         canvas.addEventListener('touchmove', (e) => {
             e.preventDefault();
@@ -782,21 +884,19 @@
             if (dx < -20) { keys['ArrowLeft'] = true; keys['ArrowRight'] = false; }
             else if (dx > 20) { keys['ArrowRight'] = true; keys['ArrowLeft'] = false; }
             else { keys['ArrowLeft'] = false; keys['ArrowRight'] = false; }
-        });
+        }, { passive: false });
 
         canvas.addEventListener('touchend', (e) => {
             e.preventDefault();
             keys['ArrowLeft'] = false;
             keys['ArrowRight'] = false;
-            keys[' '] = false;
             touchActive = false;
-            // Tap to jump
             if (Math.abs(e.changedTouches[0].clientX - touchStartX) < 20 &&
                 Math.abs(e.changedTouches[0].clientY - touchStartY) < 20) {
                 keys[' '] = true;
                 setTimeout(() => keys[' '] = false, 100);
             }
-        });
+        }, { passive: false });
 
         // Initialize
         buildLevel();

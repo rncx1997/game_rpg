@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Pacman Pixel - Main Game</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; }
+        body {
+            background: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: 'Courier New', monospace;
+            overflow: hidden;
+            touch-action: none;
+        }
+        .game-wrapper { position: relative; width: 100%; max-width: 560px; text-align: center; }
+        .game-header {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 8px 14px; background: #1a1a2e;
+            border: 2px solid #333; border-bottom: none;
+            color: #fff; font-size: 14px; font-weight: bold;
+        }
+        .game-header .score { color: #fbbf24; }
+        canvas {
+            display: block; width: 100%; aspect-ratio: 1/1;
+            border: 2px solid #333;
+            image-rendering: pixelated; image-rendering: crisp-edges;
+        }
+        .controls-info {
+            color: #666; font-size: 10px; padding: 6px;
+            background: #1a1a2e; border: 1px solid #333; border-top: none;
+        }
+        .back-link { display: inline-block; margin-top: 6px; color: #7c3aed; text-decoration: none; font-size: 12px; }
+
+        .touch-controls {
+            display: block; position: absolute;
+            bottom: 36px; left: 0; right: 0;
+            pointer-events: none; z-index: 10;
+        }
+        .dpad {
+            position: absolute; bottom: 0; left: 50%; transform: translateX(-50%);
+            display: grid;
+            grid-template-columns: 56px 56px 56px;
+            grid-template-rows: 56px 56px;
+            gap: 4px;
+            pointer-events: auto;
+        }
+        .ctrl-btn {
+            width: 56px; height: 56px; border-radius: 12px;
+            border: 2px solid rgba(255,255,255,0.3);
+            background: rgba(255,255,255,0.08);
+            color: rgba(255,255,255,0.8);
+            font-size: 22px;
+            display: flex; align-items: center; justify-content: center;
+            touch-action: none; cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .ctrl-btn:active, .ctrl-btn.pressed {
+            background: rgba(255,255,255,0.2);
+            transform: scale(0.92);
+        }
+        .btn-up { grid-column: 2; grid-row: 1; }
+        .btn-left { grid-column: 1; grid-row: 2; }
+        .btn-down { grid-column: 2; grid-row: 2; }
+        .btn-right { grid-column: 3; grid-row: 2; }
+
+        @media (max-width: 400px) {
+            .dpad { grid-template-columns: 48px 48px 48px; grid-template-rows: 48px 48px; gap: 3px; }
+            .ctrl-btn { width: 48px; height: 48px; font-size: 18px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-wrapper">
+        <div class="game-header">
+            <span>PAC-MAN <span style="color:#fbbf24;">PIXEL</span></span>
+            <span>SKOR: <span class="score" id="scoreDisplay">0</span></span>
+        </div>
+        <div style="position:relative;display:inline-block;width:100%;">
+            <canvas id="gameCanvas" width="560" height="560"></canvas>
+            <div class="touch-controls">
+                <div class="dpad">
+                    <button class="ctrl-btn btn-up" id="btnUp">&#x25B2;</button>
+                    <button class="ctrl-btn btn-left" id="btnLeft">&#x25C0;</button>
+                    <button class="ctrl-btn btn-down" id="btnDown">&#x25BC;</button>
+                    <button class="ctrl-btn btn-right" id="btnRight">&#x25B6;</button>
+                </div>
+            </div>
+        </div>
+        <div class="controls-info"><kbd>&larr;</kbd> <kbd>&uarr;</kbd> <kbd>&darr;</kbd> <kbd>&rarr;</kbd> Gerak &nbsp;|&nbsp; <kbd>R</kbd> Restart</div>
+        <a href="index.html" class="back-link">&larr; Kembali</a>
+    </div>
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreSpan = document.getElementById('scoreDisplay');
+
+        const TILE = 28;
+        const COLS = 20;
+        const ROWS = 20;
+        const W = COLS * TILE;
+        const H = ROWS * TILE;
+
+        let score = 0;
+        let gameOver = false;
+        let gameWin = false;
+
+        const DIR = { UP: 0, DOWN: 1, LEFT: 2, RIGHT: 3 };
+
+        const maze = [
+            "####################",
+            "#............#.....#",
+            "#.####.#####.#.###.#",
+            "#.####.#####.#.###.#",
+            "#.....#...#.....#.#",
+            "#.###.#.###.###.#.#",
+            "#.#...#...#...#...#",
+            "#.#.###.#.###.###.#",
+            "#.#.#.......#...#.#",
+            "#.#.#.#####.#.###.#",
+            "#...#.......#.....#",
+            "#.###.#####.###.###",
+            "#.#.#.......#...#.#",
+            "#.#.#.#####.###.#.#",
+            "#.#...#...#...#.#.#",
+            "#.###.#.###.###.#.#",
+            "#.....#...#.....#.#",
+            "#.#####.###.###.#.#",
+            "#.............#...#",
+            "####################"
+        ];
+
+        let dots = [];
+        let pacman = { x: 0, y: 0, dir: DIR.RIGHT, nextDir: DIR.RIGHT, mouth: 0, mouthDir: 1 };
+        let ghosts = [];
+        let animFrame = 0;
+
+        function buildLevel() {
+            dots = [];
+            ghosts = [];
+            for (let r = 0; r < ROWS; r++) {
+                for (let c = 0; c < COLS; c++) {
+                    if (maze[r][c] === '.') {
+                        dots.push({ x: c, y: r, eaten: false });
+                    }
+                }
+            }
+
+            // Place pacman
+            pacman.x = 9;
+            pacman.y = 15;
+            pacman.dir = DIR.LEFT;
+            pacman.nextDir = DIR.LEFT;
+
+            // Ghosts
+            const ghostColors = ['#ff0000', '#ffb8ff', '#00ffff', '#ffb852'];
+            const ghostPositions = [{ x: 9, y: 8 }, { x: 8, y: 8 }, { x: 10, y: 8 }, { x: 9, y: 9 }];
+            for (let i = 0; i < 4; i++) {
+                ghosts.push({
+                    x: ghostPositions[i].x,
+                    y: ghostPositions[i].y,
+                    color: ghostColors[i],
+                    dir: DIR.UP,
+                    frightened: false,
+                    scatterTarget: [{ x: 1, y: 1 }, { x: 18, y: 1 }, { x: 1, y: 18 }, { x: 18, y: 18 }][i]
+                });
+            }
+        }
+
+        function isWall(x, y) {
+            if (x < 0 || x >= COLS || y < 0 || y >= ROWS) return true;
+            return maze[y][x] === '#';
+        }
+
+        function canMove(x, y) {
+            return !isWall(x, y);
+        }
+
+        let moveTimer = 0;
+        let ghostTimer = 0;
+        const MOVE_INTERVAL = 8;
+        const GHOST_INTERVAL = 12;
+
+        function updatePacman() {
+            moveTimer++;
+            if (moveTimer < MOVE_INTERVAL) return;
+            moveTimer = 0;
+
+            const tileX = Math.round(pacman.x);
+            const tileY = Math.round(pacman.y);
+
+            const nd = pacman.nextDir;
+            let nx = tileX, ny = tileY;
+            if (nd === DIR.LEFT) nx--;
+            else if (nd === DIR.RIGHT) nx++;
+            else if (nd === DIR.UP) ny--;
+            else if (nd === DIR.DOWN) ny++;
+
+            if (canMove(nx, ny)) {
+                pacman.dir = nd;
+            }
+
+            let dx = 0, dy = 0;
+            if (pacman.dir === DIR.LEFT) dx = -1;
+            else if (pacman.dir === DIR.RIGHT) dx = 1;
+            else if (pacman.dir === DIR.UP) dy = -1;
+            else if (pacman.dir === DIR.DOWN) dy = 1;
+
+            const nextX = tileX + dx;
+            const nextY = tileY + dy;
+
+            if (canMove(nextX, nextY)) {
+                pacman.x = nextX;
+                pacman.y = nextY;
+            }
+
+            if (pacman.x < -0.5) pacman.x = COLS - 0.5;
+            if (pacman.x > COLS - 0.5) pacman.x = -0.5;
+
+            const px = Math.round(pacman.x);
+            const py = Math.round(pacman.y);
+            for (const dot of dots) {
+                if (!dot.eaten && dot.x === px && dot.y === py) {
+                    dot.eaten = true;
+                    score += 10;
+                    updateDisplay();
+                }
+            }
+
+            if (dots.every(d => d.eaten)) {
+                gameWin = true;
+            }
+
+            pacman.mouth += 0.15 * pacman.mouthDir;
+            if (pacman.mouth > 1) pacman.mouthDir = -1;
+            if (pacman.mouth < 0) pacman.mouthDir = 1;
+        }
+
+        function updateGhosts() {
+            for (const ghost of ghosts) {
+                const tx = Math.round(ghost.x);
+                const ty = Math.round(ghost.y);
+
+                const dirs = [DIR.UP, DIR.DOWN, DIR.LEFT, DIR.RIGHT];
+                const possible = [];
+
+                for (const d of dirs) {
+                    let nx = tx, ny = ty;
+                    if (d === DIR.LEFT) nx--;
+                    else if (d === DIR.RIGHT) nx++;
+                    else if (d === DIR.UP) ny--;
+                    else if (d === DIR.DOWN) ny++;
+
+                    if (canMove(nx, ny) && d !== (ghost.dir ^ 1)) {
+                        possible.push(d);
+                    }
+                }
+
+                if (possible.length > 0) {
+                    const targetX = pacman.x;
+                    const targetY = pacman.y;
+                    let bestDir = possible[0];
+                    let bestDist = Infinity;
+
+                    for (const d of possible) {
+                        let nx = tx, ny = ty;
+                        if (d === DIR.LEFT) nx--;
+                        else if (d === DIR.RIGHT) nx++;
+                        else if (d === DIR.UP) ny--;
+                        else if (d === DIR.DOWN) ny++;
+                        const dist = Math.abs(nx - targetX) + Math.abs(ny - targetY);
+                        if (dist < bestDist) {
+                            bestDist = dist;
+                            bestDir = d;
+                        }
+                    }
+                    if (Math.random() < 0.3 && possible.length > 1) {
+                        const other = possible.filter(d => d !== bestDir);
+                        ghost.dir = other[Math.floor(Math.random() * other.length)];
+                    } else {
+                        ghost.dir = bestDir;
+                    }
+                }
+
+                let dx = 0, dy = 0;
+                if (ghost.dir === DIR.LEFT) dx = -1;
+                else if (ghost.dir === DIR.RIGHT) dx = 1;
+                else if (ghost.dir === DIR.UP) dy = -1;
+                else if (ghost.dir === DIR.DOWN) dy = 1;
+
+                const nextX = tx + dx;
+                const nextY = ty + dy;
+                if (canMove(nextX, nextY)) {
+                    ghost.x = nextX;
+                    ghost.y = nextY;
+                } else {
+                    ghost.dir = (ghost.dir + 2) % 4;
+                }
+
+                if (ghost.x < -0.5) ghost.x = COLS - 0.5;
+                if (ghost.x > COLS - 0.5) ghost.x = -0.5;
+            }
+        }
+
+        function checkCollisions() {
+            const px = Math.round(pacman.x);
+            const py = Math.round(pacman.y);
+            for (const ghost of ghosts) {
+                const gx = Math.round(ghost.x);
+                const gy = Math.round(ghost.y);
+                if (px === gx && py === gy) {
+                    gameOver = true;
+                }
+            }
+        }
+
+        function updateDisplay() {
+            scoreSpan.textContent = score;
+        }
+
+        let startGrace = 60;
+
+        function update() {
+            if (gameOver || gameWin) return;
+            animFrame++;
+            if (startGrace > 0) { startGrace--; }
+            updatePacman();
+            ghostTimer++;
+            if (ghostTimer >= GHOST_INTERVAL) {
+                ghostTimer = 0;
+                updateGhosts();
+            }
+            if (startGrace <= 0) checkCollisions();
+        }
+
+        function draw() {
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, W, H);
+
+            for (let r = 0; r < ROWS; r++) {
+                for (let c = 0; c < COLS; c++) {
+                    if (maze[r][c] === '#') {
+                        ctx.fillStyle = '#2121de';
+                        ctx.fillRect(c * TILE, r * TILE, TILE, TILE);
+                        ctx.fillStyle = '#0000aa';
+                        ctx.fillRect(c * TILE + 2, r * TILE + 2, TILE - 4, TILE - 4);
+                    }
+                }
+            }
+
+            for (const dot of dots) {
+                if (dot.eaten) continue;
+                ctx.fillStyle = '#ffb8ae';
+                ctx.beginPath();
+                ctx.arc(dot.x * TILE + TILE / 2, dot.y * TILE + TILE / 2, 3, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            const px = pacman.x * TILE + TILE / 2;
+            const py = pacman.y * TILE + TILE / 2;
+            const mouthAngle = pacman.mouth * 0.3;
+            let startAngle = 0;
+            if (pacman.dir === DIR.RIGHT) startAngle = 0;
+            else if (pacman.dir === DIR.DOWN) startAngle = Math.PI / 2;
+            else if (pacman.dir === DIR.LEFT) startAngle = Math.PI;
+            else if (pacman.dir === DIR.UP) startAngle = -Math.PI / 2;
+
+            ctx.fillStyle = '#ffff00';
+            ctx.beginPath();
+            ctx.arc(px, py, TILE / 2 - 1, startAngle + mouthAngle, startAngle + Math.PI * 2 - mouthAngle);
+            ctx.lineTo(px, py);
+            ctx.fill();
+
+            for (const ghost of ghosts) {
+                const gx = ghost.x * TILE + TILE / 2;
+                const gy = ghost.y * TILE + TILE / 2;
+                ctx.fillStyle = ghost.color;
+                ctx.beginPath();
+                ctx.arc(gx, gy, TILE / 2 - 2, Math.PI, 0);
+                ctx.fill();
+                const wave = Math.sin(animFrame * 0.2) * 2;
+                ctx.fillRect(gx - (TILE / 2 - 2), gy, TILE - 4, TILE / 4);
+                ctx.fillStyle = '#fff';
+                ctx.beginPath();
+                ctx.arc(gx - 4, gy - 3, 4, 0, Math.PI * 2);
+                ctx.arc(gx + 4, gy - 3, 4, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#0000aa';
+                ctx.beginPath();
+                ctx.arc(gx - 4, gy - 3, 2, 0, Math.PI * 2);
+                ctx.arc(gx + 4, gy - 3, 2, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            if (gameOver) {
+                ctx.fillStyle = 'rgba(0,0,0,0.7)';
+                ctx.fillRect(0, 0, W, H);
+                ctx.fillStyle = '#fff';
+                ctx.font = '40px "Courier New", monospace';
+                ctx.textAlign = 'center';
+                ctx.fillText('GAME OVER', W / 2, H / 2 - 10);
+                ctx.font = '16px "Courier New", monospace';
+                ctx.fillText('Tekan R untuk restart', W / 2, H / 2 + 30);
+            }
+
+            if (gameWin) {
+                ctx.fillStyle = 'rgba(0,0,0,0.7)';
+                ctx.fillRect(0, 0, W, H);
+                ctx.fillStyle = '#fbbf24';
+                ctx.font = '36px "Courier New", monospace';
+                ctx.textAlign = 'center';
+                ctx.fillText('KAMU MENANG!', W / 2, H / 2 - 10);
+                ctx.fillStyle = '#fff';
+                ctx.font = '16px "Courier New", monospace';
+                ctx.fillText('Tekan R untuk main lagi', W / 2, H / 2 + 30);
+            }
+        }
+
+        function gameLoop() {
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        function resetGame() {
+            score = 0;
+            gameOver = false;
+            gameWin = false;
+            startGrace = 60;
+            moveTimer = 0;
+            ghostTimer = 0;
+            buildLevel();
+            updateDisplay();
+        }
+
+        // Keyboard
+        document.addEventListener('keydown', (e) => {
+            const key = e.key;
+            if (key === 'r' || key === 'R') { if (gameOver || gameWin) resetGame(); return; }
+            if (gameOver || gameWin) return;
+            if (key === 'ArrowUp' || key === 'w' || key === 'W') pacman.nextDir = DIR.UP;
+            else if (key === 'ArrowDown' || key === 's' || key === 'S') pacman.nextDir = DIR.DOWN;
+            else if (key === 'ArrowLeft' || key === 'a' || key === 'A') pacman.nextDir = DIR.LEFT;
+            else if (key === 'ArrowRight' || key === 'd' || key === 'D') pacman.nextDir = DIR.RIGHT;
+            e.preventDefault();
+        });
+
+        // Touch D-pad
+        function setupBtn(id, dir) {
+            const el = document.getElementById(id);
+            const press = (e) => { e.preventDefault(); if (!gameOver && !gameWin) pacman.nextDir = dir; el.classList.add('pressed'); };
+            const release = (e) => { e.preventDefault(); el.classList.remove('pressed'); };
+            el.addEventListener('touchstart', press, { passive: false });
+            el.addEventListener('touchend', release, { passive: false });
+            el.addEventListener('touchcancel', release, { passive: false });
+            el.addEventListener('mousedown', press);
+            el.addEventListener('mouseup', release);
+            el.addEventListener('mouseleave', release);
+        }
+
+        setupBtn('btnUp', DIR.UP);
+        setupBtn('btnDown', DIR.DOWN);
+        setupBtn('btnLeft', DIR.LEFT);
+        setupBtn('btnRight', DIR.RIGHT);
+
+        buildLevel();
+        gameLoop();
+    </script>
+</body>
+</html>

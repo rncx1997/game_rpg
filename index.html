@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GameRPG - Download Game Gratis</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+<body>
+
+    <!-- Navbar -->
+    <nav class="navbar">
+        <div class="container">
+            <a href="#" class="logo"><i class="fas fa-gamepad"></i> GameRPG</a>
+            <div class="nav-toggle" id="navToggle"><i class="fas fa-bars"></i></div>
+            <ul class="nav-links" id="navLinks">
+                <li><a href="#home" class="active">Beranda</a></li>
+                <li><a href="#mario">Main Game</a></li>
+                <li><a href="#games">Game</a></li>
+                <li><a href="#about">Tentang</a></li>
+                <li><a href="#contact">Kontak</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section id="home" class="hero">
+        <div class="hero-content">
+            <h1>Download Game <span>RPG</span> Favoritmu</h1>
+            <p>Koleksi ribuan game RPG terbaik dari berbagai genre. Gratis dan mudah!</p>
+            <div class="hero-buttons">
+                <a href="#games" class="btn btn-primary"><i class="fas fa-download"></i> Lihat Game</a>
+                <a href="#mario" class="btn btn-secondary"><i class="fas fa-play"></i> Main Game</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Mario Game Section -->
+    <section id="mario" class="mario-section">
+        <div class="container">
+            <h2 class="section-title">Super Mario <span>Pixel</span></h2>
+            <p class="section-subtitle">Mainkan langsung di browser! Klasik platformer pixel art.</p>
+            <div class="mario-wrapper">
+                <div class="mario-game-container">
+                    <iframe src="mario-game.html" class="mario-iframe" id="marioIframe" sandbox="allow-scripts allow-same-origin"></iframe>
+                </div>
+                <div class="mario-actions">
+                    <a href="mario-game.html" target="_blank" class="btn btn-primary"><i class="fas fa-expand"></i> Buka Layar Penuh</a>
+                    <a href="mario-game.html" download class="btn btn-secondary download-mario-btn" id="downloadMarioBtn"><i class="fas fa-download"></i> Download Game (HTML)</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Search Bar -->
+    <section class="search-section">
+        <div class="container">
+            <div class="search-wrapper">
+                <i class="fas fa-search"></i>
+                <input type="text" id="searchInput" placeholder="Cari game...">
+                <select id="genreFilter">
+                    <option value="all">Semua Genre</option>
+                    <option value="rpg">RPG</option>
+                    <option value="action">Action</option>
+                    <option value="adventure">Petualangan</option>
+                    <option value="fantasy">Fantasi</option>
+                    <option value="sci-fi">Sci-Fi</option>
+                    <option value="horror">Horor</option>
+                    <option value="open-world">Open World</option>
+                    <option value="strategy">Strategi</option>
+                    <option value="simulation">Simulasi</option>
+                    <option value="racing">Balapan</option>
+                    <option value="fighting">Fighting</option>
+                    <option value="sports">Olahraga</option>
+                    <option value="puzzle">Puzzle</option>
+                    <option value="platformer">Platformer</option>
+                    <option value="retro">Retro</option>
+                    <option value="indie">Indie</option>
+                </select>
+            </div>
+        </div>
+    </section>
+
+    <!-- Game Grid -->
+    <section id="games" class="games-section">
+        <div class="container">
+            <h2 class="section-title">Daftar Game <span>Populer</span></h2>
+            <div class="games-grid" id="gamesGrid"></div>
+            <div id="noResults" class="no-results hidden">
+                <i class="fas fa-search"></i>
+                <p>Game tidak ditemukan</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- About -->
+    <section id="about" class="about-section">
+        <div class="container">
+            <h2 class="section-title">Tentang <span>GameRPG</span></h2>
+            <div class="about-content">
+                <div class="about-text">
+                    <p>GameRPG adalah platform download game RPG terbesar di Indonesia. Kami menyediakan ribuan game dari berbagai genre yang bisa kamu download secara gratis dan legal.</p>
+                    <p>Setiap game telah kami kurasi dan pastikan aman untuk di-download. Nikmati pengalaman bermain game RPG terbaik hanya di GameRPG!</p>
+                    <div class="stats">
+                        <div class="stat"><span class="count" data-target="2500">0</span>+ Game</div>
+                        <div class="stat"><span class="count" data-target="120000">0</span>+ Download</div>
+                        <div class="stat"><span class="count" data-target="98">0</span>% Puas</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Contact -->
+    <section id="contact" class="contact-section">
+        <div class="container">
+            <h2 class="section-title">Hubungi <span>Kami</span></h2>
+            <div class="contact-content">
+                <form id="contactForm">
+                    <input type="text" placeholder="Nama" required>
+                    <input type="email" placeholder="Email" required>
+                    <textarea placeholder="Pesan" rows="5" required></textarea>
+                    <button type="submit" class="btn btn-primary">Kirim Pesan</button>
+                </form>
+                <div class="contact-info">
+                    <p><i class="fas fa-envelope"></i> support@gamerpg.com</p>
+                    <p><i class="fas fa-phone"></i> +62 812-3456-7890</p>
+                    <p><i class="fas fa-map-marker-alt"></i> Jakarta, Indonesia</p>
+                    <div class="social">
+                        <a href="#"><i class="fab fa-facebook"></i></a>
+                        <a href="#"><i class="fab fa-instagram"></i></a>
+                        <a href="#"><i class="fab fa-twitter"></i></a>
+                        <a href="#"><i class="fab fa-youtube"></i></a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Modal Detail Game -->
+    <div id="gameModal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn">&times;</span>
+            <div class="modal-body">
+                <img id="modalImage" src="" alt="">
+                <div class="modal-info">
+                    <h2 id="modalTitle"></h2>
+                    <p class="genre" id="modalGenre"></p>
+                    <p class="size" id="modalSize"></p>
+                    <p id="modalDesc"></p>
+                    <div class="modal-specs">
+                        <h4>Spesifikasi Minimal:</h4>
+                        <ul id="modalSpecs"></ul>
+                    </div>
+                    <a href="#" id="downloadBtn" class="btn btn-primary download-btn">
+                        <i class="fas fa-download"></i> Download Game
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <p>&copy; 2026 GameRPG. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <!-- Toast -->
+    <div id="toast" class="toast hidden"></div>
+
+    <script src="js/script.js"></script>
+</body>
+</html>

@@ -71,9 +71,9 @@
         }
         .back-link:hover { text-decoration: underline; }
 
-        /* Joystick overlay - only shown on touch devices */
+        /* Joystick overlay - always visible for touch screens */
         .touch-controls {
-            display: none;
+            display: block;
             position: absolute;
             bottom: 50px;
             left: 0;
@@ -138,10 +138,6 @@
         .jump-btn .ctrl-btn.pressed {
             background: rgba(37, 99, 235, 0.4);
             border-color: rgba(37, 99, 235, 0.8);
-        }
-
-        @media (hover: none) and (pointer: coarse) {
-            .touch-controls { display: block; }
         }
 
         @media (max-width: 600px) {

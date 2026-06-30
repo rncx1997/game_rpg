@@ -2,7 +2,8 @@ const games = [
     { id: 1, title: "Super Mario Pixel", genre: "platformer", genreLabel: "Platformer", size: "Browser", plays: "99.9k", image: "img/supermario.jpg", description: "Game platformer klasik Super Mario versi pixel. Lompat, kumpulkan koin, dan kalahkan musuh.", playable: true, url: "mario-game.html" },
     { id: 2, title: "Pacman Pixel", genre: "retro", genreLabel: "Retro", size: "Browser", plays: "88.5k", image: "https://img.itch.zone/aW1nLzE5MjA4MTQ5LnBuZw==/original/ZX%2FlHq.png", description: "Game klasik Pacman versi pixel. Makan semua titik dan hindari hantu.", playable: true, url: "pacman-game.html" },
     { id: 3, title: "Tetris Pixel", genre: "puzzle", genreLabel: "Puzzle", size: "Browser", plays: "76.2k", image: "img/tetris.webp", description: "Game puzzle klasik Tetris. Susun blok untuk menghilangkan baris. Semakin tinggi skor, semakin cepat!", playable: true, url: "tetris-game.html" },
-    { id: 4, title: "Sonic Pixel", genre: "platformer", genreLabel: "Platformer", size: "Browser", plays: "65.1k", image: "https://m.gjcdn.net/fireside-post-image/800/6885345-ll-szknyn9v-v4.webp", description: "Game platformer Sonic versi pixel. Kumpulkan ring, kalahkan musuh, dan capai kecepatan maksimal!", playable: true, url: "sonic-game.html" }
+    { id: 4, title: "Sonic Pixel", genre: "platformer", genreLabel: "Platformer", size: "Browser", plays: "65.1k", image: "https://m.gjcdn.net/fireside-post-image/800/6885345-ll-szknyn9v-v4.webp", description: "Game platformer Sonic versi pixel. Kumpulkan ring, kalahkan musuh, dan capai kecepatan maksimal!", playable: true, url: "sonic-game.html" },
+    { id: 5, title: "Tower Block Pixel", genre: "puzzle", genreLabel: "Puzzle", size: "Browser", plays: "42.3k", image: "img/tower block.webp", description: "Game puzzle susun balok kota. Blok jatuh dari atas, geser dengan A/D, Space turun cepat. Susun bebas setinggi mungkin!", playable: true, url: "tower-game.html" }
 ];
 
 const gamesGrid = document.getElementById('gamesGrid');
@@ -44,8 +45,10 @@ function renderGames(filteredGames) {
         const card = document.createElement('div');
         card.className = 'game-card';
         const badge = game.playable ? 'playable-badge' : '';
+        const isFav = isFavorite(game.id);
         card.innerHTML = `
             <img src="${game.image}" alt="${game.title}" class="game-card-image" loading="lazy">
+            <button class="fav-btn ${isFav ? 'active' : ''}" data-id="${game.id}" onclick="event.stopPropagation();toggleFav(${game.id})"><i class="fa${isFav ? 's' : 'r'} fa-heart"></i></button>
             <div class="game-card-body">
                 <h3>${game.title}</h3>
                 <div class="game-meta">
@@ -67,6 +70,23 @@ function filterGames() {
         game.genreLabel.toLowerCase().includes(query)
     );
     renderGames(filtered);
+}
+
+function getFavs() {
+    return JSON.parse(localStorage.getItem('ternalFavs') || '[]');
+}
+function isFavorite(id) {
+    return getFavs().includes(id);
+}
+function toggleFav(id) {
+    let favs = getFavs();
+    if (favs.includes(id)) {
+        favs = favs.filter(f => f !== id);
+    } else {
+        favs.push(id);
+    }
+    localStorage.setItem('ternalFavs', JSON.stringify(favs));
+    filterGames();
 }
 
 searchInput.addEventListener('input', filterGames);
@@ -100,12 +120,11 @@ function openGamePlay(game) {
         document.body.style.overflow = 'hidden';
         gameIframe.onload = () => gameIframe.focus();
         setTimeout(() => gameIframe.focus(), 300);
+        addGameHistory(game.title);
     });
 }
 
 const AD_DATA = {
-    videoId: 'owGykVbfgUE',
-    poster: 'https://img.youtube.com/vi/owGykVbfgUE/hqdefault.jpg',
     logo: '🛁',
     brand: 'Old Spice',
     tagline: 'Bau badan? Old Spice jawabannya!'
@@ -119,14 +138,13 @@ function showAd(callback) {
     adSkipBtn.disabled = true;
     adSkipBtn.classList.remove('active');
     document.getElementById('adProgressBar').style.width = '0%';
-    document.getElementById('adPlayBtn').classList.remove('visible');
 
-    document.getElementById('adPoster').src = AD_DATA.poster;
     document.getElementById('adBrandLogo').textContent = AD_DATA.logo;
     document.getElementById('adBrandName').textContent = AD_DATA.brand;
     document.getElementById('adBrandTagline').textContent = AD_DATA.tagline;
 
-    adVideo.src = 'https://www.youtube.com/embed/' + AD_DATA.videoId + '?autoplay=1&mute=1&controls=0&modestbranding=1&rel=0&playsinline=1&enablejsapi=1';
+    adVideo.currentTime = 0;
+    adVideo.play();
 
     adLoading.classList.remove('hidden');
     setTimeout(function() { adLoading.classList.add('hidden'); }, 2000);
@@ -150,17 +168,12 @@ function showAd(callback) {
             adLoading.classList.add('hidden');
         }
     }, 1000);
-
-    setTimeout(function() {
-        var pb = document.getElementById('adPlayBtn');
-        if (!adSkippable) pb.classList.add('visible');
-    }, 1500);
 }
 
 function closeAd() {
     clearInterval(adInterval);
     adOverlay.classList.add('hidden');
-    adVideo.src = '';
+    adVideo.pause();
     if (adPendingCallback) {
         var cb = adPendingCallback;
         adPendingCallback = null;
@@ -173,18 +186,6 @@ adSkipBtn.addEventListener('click', function() {
 });
 adSkipBtn.addEventListener('touchend', function(e) {
     if (adSkippable) { e.preventDefault(); closeAd(); }
-});
-
-document.getElementById('adPlayBtn').addEventListener('click', function() {
-    this.classList.remove('visible');
-    document.getElementById('adPoster').classList.add('hidden');
-    adVideo.src = 'https://www.youtube.com/embed/' + AD_DATA.videoId + '?autoplay=1&mute=0&controls=0&modestbranding=1&rel=0&playsinline=1';
-});
-document.getElementById('adPlayBtn').addEventListener('touchend', function(e) {
-    e.preventDefault();
-    this.classList.remove('visible');
-    document.getElementById('adPoster').classList.add('hidden');
-    adVideo.src = 'https://www.youtube.com/embed/' + AD_DATA.videoId + '?autoplay=1&mute=0&controls=0&modestbranding=1&rel=0&playsinline=1';
 });
 
 gamePlayModal.addEventListener('click', (e) => {
@@ -216,31 +217,37 @@ closeGameBtns.forEach(btn => {
 });
 
 document.addEventListener('keydown', (e) => {
+    const isGameActive = gamePlayModal.classList.contains('active');
+    
     if (e.key === 'Escape') {
-        if (gamePlayModal.classList.contains('active')) closeGamePlay();
+        if (isGameActive) closeGamePlay();
         else closeModal();
         return;
     }
-    // Prevent scrolling for game keys
-    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' ', 'w', 'W', 'a', 'A', 's', 'S', 'd', 'D'].includes(e.key)) {
+    
+    // Only intercept game keys when game modal is active
+    if (isGameActive && ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' ', 'Space', 'w', 'W', 'a', 'A', 's', 'S', 'd', 'D', 'r', 'R'].includes(e.key)) {
         e.preventDefault();
-    }
-    // Forward keyboard events to game iframe
-    const iframe = document.getElementById('gameIframe');
-    if (iframe && iframe.contentDocument && gamePlayModal.classList.contains('active')) {
-        iframe.contentDocument.dispatchEvent(new KeyboardEvent('keydown', {
-            key: e.key, code: e.code, keyCode: e.keyCode,
-            bubbles: true, cancelable: true
-        }));
+        // Forward keyboard events to game iframe
+        const iframe = document.getElementById('gameIframe');
+        const doc = iframe?.contentDocument || iframe?.contentWindow?.document;
+        if (doc) {
+            doc.dispatchEvent(new KeyboardEvent('keydown', {
+                key: e.key, code: e.code, keyCode: e.keyCode || e.which,
+                which: e.keyCode || e.which, bubbles: true, cancelable: true
+            }));
+        }
     }
 });
 
 document.addEventListener('keyup', (e) => {
+    if (!gamePlayModal.classList.contains('active')) return;
     const iframe = document.getElementById('gameIframe');
-    if (iframe && iframe.contentDocument && gamePlayModal.classList.contains('active')) {
-        iframe.contentDocument.dispatchEvent(new KeyboardEvent('keyup', {
-            key: e.key, code: e.code, keyCode: e.keyCode,
-            bubbles: true, cancelable: true
+    const doc = iframe?.contentDocument || iframe?.contentWindow?.document;
+    if (doc) {
+        doc.dispatchEvent(new KeyboardEvent('keyup', {
+            key: e.key, code: e.code, keyCode: e.keyCode || e.which,
+            which: e.keyCode || e.which, bubbles: true, cancelable: true
         }));
     }
 });
@@ -327,3 +334,232 @@ document.getElementById('contactForm').addEventListener('submit', (e) => {
 
 // Init
 filterGames();
+
+// Auth system
+function showAuthModal() {
+    document.getElementById('authModal').style.display = 'flex';
+}
+function hideAuthModal() {
+    document.getElementById('authModal').style.display = 'none';
+    document.getElementById('authError').textContent = '';
+}
+function switchAuthTab(tab) {
+    document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
+    if (tab === 'login') {
+        document.getElementById('tabLogin').classList.add('active');
+        document.getElementById('authSubmit').textContent = 'Masuk';
+    } else {
+        document.getElementById('tabRegister').classList.add('active');
+        document.getElementById('authSubmit').textContent = 'Daftar';
+    }
+    document.getElementById('authError').textContent = '';
+}
+function handleAuth(e) {
+    e.preventDefault();
+    const name = document.getElementById('authName').value.trim();
+    const pass = document.getElementById('authPass').value;
+    const isLogin = document.getElementById('tabLogin').classList.contains('active');
+    const errorEl = document.getElementById('authError');
+    const users = JSON.parse(localStorage.getItem('ternalUsers') || '{}');
+    if (isLogin) {
+        if (!users[name]) { errorEl.textContent = 'Akun tidak ditemukan'; return; }
+        if (users[name] !== pass) { errorEl.textContent = 'Kata sandi salah'; return; }
+        localStorage.setItem('ternalUser', name);
+    } else {
+        if (users[name]) { errorEl.textContent = 'Nama sudah terdaftar'; return; }
+        users[name] = pass;
+        localStorage.setItem('ternalUsers', JSON.stringify(users));
+        localStorage.setItem('ternalUser', name);
+    }
+    hideAuthModal();
+    updateProfileUI();
+    showToast('Selamat datang, ' + name + '!');
+}
+function logout() {
+    localStorage.removeItem('ternalUser');
+    updateProfileUI();
+    showToast('Berhasil keluar');
+}
+function updateProfileUI() {
+    const name = localStorage.getItem('ternalUser');
+    const btnLogin = document.getElementById('btnLogin');
+    const profileMenu = document.getElementById('profileMenu');
+    const profileName = document.getElementById('profileName');
+    const navProfileLink = document.getElementById('navProfileLink');
+    if (name) {
+        btnLogin.style.display = 'none';
+        profileMenu.style.display = 'flex';
+        profileName.textContent = name;
+        navProfileLink.style.display = '';
+ensureJoinDate();
+
+// Auto-play from query param (profile page link)
+(function() {
+    const params = new URLSearchParams(window.location.search);
+    const playId = params.get('play');
+    if (playId) {
+        const game = games.find(g => g.id === parseInt(playId));
+        if (game) {
+            // Wait for page to load then open
+            const wait = setInterval(() => {
+                if (document.querySelector('.game-card')) {
+                    clearInterval(wait);
+                    setTimeout(() => openGamePlay(game), 300);
+                }
+            }, 100);
+        }
+    }
+})();
+    } else {
+        btnLogin.style.display = '';
+        profileMenu.style.display = 'none';
+        navProfileLink.style.display = 'none';
+    }
+}
+document.getElementById('authModal').addEventListener('click', function(e) {
+    if (e.target === this) hideAuthModal();
+});
+document.getElementById('profileMenu').addEventListener('click', function() {
+    this.classList.toggle('active');
+});
+document.addEventListener('click', function(e) {
+    const pm = document.getElementById('profileMenu');
+    if (!pm.contains(e.target)) pm.classList.remove('active');
+});
+updateProfileUI();
+
+// Subscribe system
+function showSubscribeModal() {
+    document.getElementById('subscribeModal').style.display = 'flex';
+}
+function hideSubscribeModal() {
+    document.getElementById('subscribeModal').style.display = 'none';
+    document.getElementById('subError').textContent = '';
+}
+function handleSubscribe(e) {
+    e.preventDefault();
+    const name = document.getElementById('subName').value.trim();
+    const email = document.getElementById('subEmail').value.trim();
+    const subs = JSON.parse(localStorage.getItem('ternalSubs') || '[]');
+    if (subs.some(s => s.email === email)) {
+        document.getElementById('subError').textContent = 'Email sudah terdaftar!';
+        return;
+    }
+    subs.push({ name, email, date: new Date().toISOString() });
+    localStorage.setItem('ternalSubs', JSON.stringify(subs));
+    hideSubscribeModal();
+    showToast('Terima kasih! Berlangganan berhasil.');
+}
+document.getElementById('subscribeModal').addEventListener('click', function(e) {
+    if (e.target === this) hideSubscribeModal();
+});
+
+// Seed default accounts
+(function() {
+    const users = JSON.parse(localStorage.getItem('ternalUsers') || '{}');
+    if (!users['rncx']) {
+        users['rncx'] = '#chacinx';
+    }
+    if (!users['iamutaki']) {
+        users['iamutaki'] = '#chacinx';
+    }
+    localStorage.setItem('ternalUsers', JSON.stringify(users));
+})();
+
+// Game history
+function addGameHistory(title) {
+    const name = localStorage.getItem('ternalUser');
+    if (!name) return;
+    const key = 'ternalHistory_' + name;
+    const history = JSON.parse(localStorage.getItem(key) || '[]');
+    history.unshift({ title, time: new Date().toLocaleString('id-ID') });
+    if (history.length > 20) history.pop();
+    localStorage.setItem(key, JSON.stringify(history));
+}
+
+// Profile
+function showProfileModal() {
+    const name = localStorage.getItem('ternalUser');
+    if (!name) return;
+    document.getElementById('profileModalName').textContent = name;
+    const photo = localStorage.getItem('ternalPhoto_' + name);
+    const icon = document.getElementById('profilePhotoIcon');
+    const img = document.getElementById('profilePhotoImg');
+    if (photo) {
+        icon.style.display = 'none';
+        img.style.display = '';
+        img.src = photo;
+    } else {
+        icon.style.display = '';
+        img.style.display = 'none';
+    }
+    const join = localStorage.getItem('ternalJoin_' + name) || new Date().toLocaleDateString('id-ID');
+    document.getElementById('profileJoin').textContent = join;
+    const key = 'ternalHistory_' + name;
+    const history = JSON.parse(localStorage.getItem(key) || '[]');
+    document.getElementById('profileGames').textContent = history.length;
+    const list = document.getElementById('historyList');
+    if (history.length === 0) {
+        list.innerHTML = '<p class="history-empty">Belum ada riwayat game</p>';
+    } else {
+        list.innerHTML = history.map(h =>
+            '<div class="history-item"><div class="history-item-icon"><i class="fas fa-gamepad"></i></div><div class="history-item-info"><div class="history-item-title">' + h.title + '</div><div class="history-item-time">' + h.time + '</div></div></div>'
+        ).join('');
+    }
+    document.getElementById('profileModal').style.display = 'flex';
+}
+function hideProfileModal() {
+    document.getElementById('profileModal').style.display = 'none';
+}
+function changePhoto(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(ev) {
+        const data = ev.target.result;
+        const name = localStorage.getItem('ternalUser');
+        localStorage.setItem('ternalPhoto_' + name, data);
+        showProfileModal();
+    };
+    reader.readAsDataURL(file);
+}
+function editName() {
+    const section = document.querySelector('.profile-name-section');
+    const current = document.getElementById('profileModalName').textContent;
+    section.innerHTML = '<div><input type="text" class="edit-name-input" id="editNameInput" value="' + current + '" placeholder="Nama baru" maxlength="20"></div><div class="edit-name-actions"><button onclick="saveName()"><i class="fas fa-check"></i></button><button onclick="showProfileModal()"><i class="fas fa-times"></i></button></div>';
+    document.getElementById('editNameInput').focus();
+    document.getElementById('editNameInput').select();
+}
+function saveName() {
+    const newName = document.getElementById('editNameInput').value.trim();
+    if (!newName || newName.length < 2) return;
+    const oldName = localStorage.getItem('ternalUser');
+    if (newName === oldName) { showProfileModal(); return; }
+    const users = JSON.parse(localStorage.getItem('ternalUsers') || '{}');
+    if (users[newName]) { showToast('Nama sudah dipakai'); return; }
+    users[newName] = users[oldName];
+    delete users[oldName];
+    localStorage.setItem('ternalUsers', JSON.stringify(users));
+    localStorage.setItem('ternalUser', newName);
+    const photo = localStorage.getItem('ternalPhoto_' + oldName);
+    if (photo) { localStorage.setItem('ternalPhoto_' + newName, photo); localStorage.removeItem('ternalPhoto_' + oldName); }
+    const history = localStorage.getItem('ternalHistory_' + oldName);
+    if (history) { localStorage.setItem('ternalHistory_' + newName, history); localStorage.removeItem('ternalHistory_' + oldName); }
+    const join = localStorage.getItem('ternalJoin_' + oldName);
+    if (join) { localStorage.setItem('ternalJoin_' + newName, join); localStorage.removeItem('ternalJoin_' + oldName); }
+    updateProfileUI();
+    showProfileModal();
+    showToast('Nama berhasil diubah!');
+}
+document.getElementById('profileModal').addEventListener('click', function(e) {
+    if (e.target === this) hideProfileModal();
+});
+
+// Save join date on first login
+function ensureJoinDate() {
+    const name = localStorage.getItem('ternalUser');
+    if (name && !localStorage.getItem('ternalJoin_' + name)) {
+        localStorage.setItem('ternalJoin_' + name, new Date().toLocaleDateString('id-ID'));
+    }
+}
+ensureJoinDate();

@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Tower Block Pixel - Main Game</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; -webkit-user-select: none; }
+        body {
+            background: #0a0a14;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: 'Courier New', monospace;
+            overflow: hidden;
+            touch-action: none;
+        }
+        .game-wrapper {
+            position: relative; width: 100%; max-width: 440px; text-align: center;
+        }
+        .game-header {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 10px 14px; background: #111;
+            border: 2px solid #222; border-bottom: none;
+        }
+        .game-header .score-label { color: #666; font-size: 11px; letter-spacing: 2px; }
+        .game-header .score-value { color: #60a5fa; font-size: 20px; font-weight: bold; }
+        .game-header .high-label { color: #666; font-size: 11px; letter-spacing: 2px; }
+        .game-header .high-value { color: #fbbf24; font-size: 16px; font-weight: bold; }
+        canvas {
+            display: block; width: 100%;
+            border: 2px solid #222;
+            image-rendering: pixelated; image-rendering: crisp-edges;
+        }
+        .controls-info {
+            color: #555; font-size: 10px; padding: 5px 8px;
+            background: #111; border: 2px solid #222; border-top: none;
+        }
+        .controls-info kbd {
+            background: #1a1a2e; padding: 1px 5px; border: 1px solid #333;
+            color: #888; font-size: 9px;
+        }
+        .back-link {
+            display: inline-block; margin-top: 4px; color: #444;
+            text-decoration: none; font-size: 11px; letter-spacing: 1px;
+        }
+        .game-over-overlay {
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            display: none; flex-direction: column;
+            justify-content: center; align-items: center;
+            background: rgba(0,0,0,0.75); z-index: 5;
+        }
+        .game-over-overlay.show { display: flex; }
+        .game-over-overlay h2 { color: #fff; font-size: 28px; letter-spacing: 3px; margin-bottom: 8px; }
+        .game-over-overlay p { color: #888; font-size: 13px; margin-bottom: 16px; }
+        .game-over-overlay .restart-btn {
+            background: #1a1a3e; color: #fff; border: 2px solid #333;
+            padding: 10px 30px; font-family: inherit; font-size: 14px;
+            cursor: pointer; letter-spacing: 2px;
+        }
+        .game-over-overlay .restart-btn:hover { background: #2a2a5e; }
+        .touch-controls {
+            display: block; position: absolute;
+            bottom: 30px; left: 0; right: 0;
+            pointer-events: none; z-index: 10;
+        }
+        .dpad {
+            position: absolute; bottom: 0; left: 50%; transform: translateX(-50%);
+            display: grid;
+            grid-template-columns: 44px 44px;
+            grid-template-rows: 44px;
+            gap: 3px;
+            pointer-events: auto;
+        }
+        .ctrl-btn {
+            width: 44px; height: 44px; border-radius: 0;
+            border: 2px solid rgba(255,255,255,0.15);
+            background: rgba(255,255,255,0.05);
+            color: rgba(255,255,255,0.6);
+            font-size: 18px;
+            display: flex; align-items: center; justify-content: center;
+            touch-action: none; cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
+            box-shadow: 2px 2px 0 rgba(0,0,0,0.4);
+        }
+        .ctrl-btn:active, .ctrl-btn.pressed {
+            background: rgba(255,255,255,0.15);
+            transform: translate(1px, 1px);
+            box-shadow: 1px 1px 0 rgba(0,0,0,0.4);
+        }
+        @media (max-width: 400px) {
+            .dpad { grid-template-columns: 38px 38px; gap: 2px; }
+            .ctrl-btn { width: 38px; height: 38px; font-size: 15px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-wrapper">
+        <div class="game-header">
+            <div><span class="score-label">SCORE</span><br><span class="score-value" id="scoreDisplay">0</span></div>
+            <div><span class="high-label">LEVEL</span><br><span class="high-value" id="levelDisplay">1</span></div>
+            <div><span class="high-label">BEST</span><br><span class="high-value" id="highDisplay">0</span></div>
+        </div>
+        <canvas id="gameCanvas" width="400" height="420"></canvas>
+        <div class="touch-controls">
+            <div class="dpad">
+                <button class="ctrl-btn btn-left" id="btnLeft"><span style="font-size:20px">&#x25C0;</span></button>
+                <button class="ctrl-btn btn-right" id="btnRight"><span style="font-size:20px">&#x25B6;</span></button>
+            </div>
+        </div>
+        <div class="controls-info">
+            <kbd>A</kbd> kiri &nbsp; <kbd>D</kbd> kanan &nbsp; <kbd>Spasi</kbd> turun &nbsp;·&nbsp; <kbd>R</kbd> reset
+        </div>
+        <a href="index.html" class="back-link">&lt; KEMBALI</a>
+        <div class="game-over-overlay" id="gameOverOverlay">
+            <h2>GAME OVER</h2>
+            <p style="color:#f87171;font-size:14px;margin-bottom:4px" id="collapseMsg">MENARA RUBUH!</p>
+            <p>Skor akhir: <span id="finalScore">0</span></p>
+            <button class="restart-btn" id="restartBtn">MAIN LAGI</button>
+        </div>
+    </div>
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const W = 400, H = 420;
+        const B = 28;
+
+        const COLORS = [
+            '#60a5fa', '#f87171', '#fbbf24', '#34d399',
+            '#a78bfa', '#f472b6', '#fb923c', '#22d3ee'
+        ];
+
+        const stars = [];
+        const buildings = [];
+        let currentLevel = 0;
+        const LEVEL_SCORE = 10;
+        let levelUpNotif = 0;
+
+        const SKY_THEMES = [
+            ['#0a0a2e', '#14143a', '#1e1e3e', 'rgba(255,255,255,0.3)'], // 1 Night
+            ['#1a0a2e', '#2a1a3e', '#3a2a3e', 'rgba(255,200,150,0.4)'], // 2 Sunset
+            ['#0f1a2e', '#1a2a3e', '#2a3a4e', 'rgba(200,200,220,0.2)'], // 3 Rainy
+            ['#1a2a3a', '#2a3a4e', '#c8d8e8', 'rgba(200,220,255,0.5)'], // 4 Snow
+            ['#0a0020', '#1a0a3a', '#2a1040', 'rgba(255,200,255,0.3)'], // 5 Neon
+        ];
+        const BLDG_THEMES = [
+            { base: [8, 24], window: 'rgba(255,232,176,0.5)', off: 'rgba(0,0,0,0.15)' },
+            { base: [20, 35], window: 'rgba(255,200,150,0.6)', off: 'rgba(0,0,0,0.2)' },
+            { base: [15, 30], window: 'rgba(180,200,220,0.4)', off: 'rgba(0,0,0,0.2)' },
+            { base: [30, 50], window: 'rgba(200,220,255,0.5)', off: 'rgba(0,0,0,0.1)' },
+            { base: [5, 20], window: 'rgba(255,100,255,0.6)', off: 'rgba(0,0,0,0.1)' },
+        ];
+
+        function generateCity(level) {
+            stars.length = 0;
+            buildings.length = 0;
+            const theme = BLDG_THEMES[level];
+            for (let i = 0; i < 50; i++) {
+                stars.push({ x: Math.random() * W, y: Math.random() * H * 0.5 });
+            }
+            let x = -10;
+            while (x < W + 10) {
+                const w = 15 + Math.random() * 45;
+                const h = 40 + Math.random() * 160;
+                const b = theme.base[0] + Math.random() * (theme.base[1] - theme.base[0]);
+                const color = `rgb(${b},${b},${b + 10})`;
+                const cols = Math.floor((w - 6) / 7);
+                const rows = Math.floor((h - 10) / 10);
+                const windows = [];
+                for (let r = 0; r < rows; r++) {
+                    for (let c = 0; c < cols; c++) {
+                        if (Math.random() > 0.35) {
+                            windows.push({ x: 3 + c * 7, y: 5 + r * 10, on: Math.random() > 0.3 });
+                        }
+                    }
+                }
+                buildings.push({ x, w, h, color, windows });
+                x += w + 2 + Math.random() * 6;
+            }
+        }
+
+        let blocks = [];
+        let falling = null;
+        let score = 0;
+        let highScore = parseInt(localStorage.getItem('towerHigh')) || 0;
+        let gameOver = false;
+        let moveLeft = false;
+        let moveRight = false;
+        let wobble = { amp: 0, phase: 0 };
+        let collapseLock = false;
+        let collapsing = false;
+
+        function drawBlock(x, y, c, highlight) {
+            ctx.fillStyle = c;
+            ctx.fillRect(x, y, B, B);
+            ctx.fillStyle = 'rgba(0,0,0,0.2)';
+            ctx.fillRect(x, y + B - 2, B, 2);
+            ctx.fillStyle = 'rgba(255,255,255,0.08)';
+            ctx.fillRect(x, y + B - 3, B, 1);
+            ctx.fillStyle = '#ffe8b0';
+            ctx.fillRect(x + 4, y + 5, 7, 9);
+            ctx.fillRect(x + 17, y + 5, 7, 9);
+            ctx.fillStyle = 'rgba(0,0,0,0.2)';
+            ctx.fillRect(x + 4, y + 9, 7, 2);
+            ctx.fillRect(x + 17, y + 9, 7, 2);
+            ctx.fillRect(x + 6, y + 5, 2, 9);
+            ctx.fillRect(x + 19, y + 5, 2, 9);
+            ctx.fillStyle = 'rgba(255,255,255,0.12)';
+            ctx.fillRect(x + 5, y + 6, 2, 3);
+            ctx.fillRect(x + 18, y + 6, 2, 3);
+            if (highlight) {
+                ctx.fillStyle = 'rgba(255,255,255,0.15)';
+                ctx.fillRect(x, y, B, 1);
+                ctx.fillRect(x, y, 1, B);
+            }
+        }
+
+        document.getElementById('highDisplay').textContent = highScore;
+
+        function topBlock() {
+            return blocks[blocks.length - 1];
+        }
+
+        function overlaps(a, b) {
+            return a.x < b.x + B && a.x + B > b.x;
+        }
+
+        function spawnBlock() {
+            falling = { x: Math.random() * (W - B), y: 0 };
+        }
+
+        function getGroundY() {
+            return H - 4;
+        }
+
+        function landBlock() {
+            if (gameOver) return;
+
+            if (blocks.length === 0) {
+                blocks.push({ x: falling.x, y: getGroundY() - B });
+                score++;
+                document.getElementById('scoreDisplay').textContent = score;
+                if (score > highScore) {
+                    highScore = score;
+                    localStorage.setItem('towerHigh', highScore);
+                    document.getElementById('highDisplay').textContent = highScore;
+                }
+                spawnBlock();
+                return;
+            }
+
+            const top = topBlock();
+            const ok = overlaps(falling, top);
+            if (!ok) {
+                document.getElementById('collapseMsg').style.display = 'none';
+                gameOver = true;
+                document.getElementById('finalScore').textContent = score;
+                document.getElementById('gameOverOverlay').classList.add('show');
+                if (score > highScore) {
+                    highScore = score;
+                    localStorage.setItem('towerHigh', highScore);
+                    document.getElementById('highDisplay').textContent = highScore;
+                }
+                return;
+            }
+            const off = Math.abs(falling.x - top.x);
+            const heightMul = 1 + blocks.length * 0.06;
+            const baseWobble = Math.min(blocks.length * 0.015, 2);
+            wobble.amp = Math.min(baseWobble + off * 0.25 * heightMul, 8);
+            wobble.phase = 0;
+            collapseLock = false;
+            const landY = top.y - B;
+            blocks.push({ x: falling.x, y: landY });
+            score++;
+            document.getElementById('scoreDisplay').textContent = score;
+            if (score > highScore) {
+                highScore = score;
+                localStorage.setItem('towerHigh', highScore);
+                document.getElementById('highDisplay').textContent = highScore;
+            }
+            if (landY <= 0) {
+                document.getElementById('collapseMsg').style.display = 'none';
+                gameOver = true;
+                document.getElementById('finalScore').textContent = score;
+                document.getElementById('gameOverOverlay').classList.add('show');
+                return;
+            }
+            if (blocks.length % LEVEL_SCORE === 0 && currentLevel < 4 && blocks.length > 0) {
+                currentLevel++;
+                document.getElementById('levelDisplay').textContent = currentLevel + 1;
+                generateCity(currentLevel);
+                levelUpNotif = 90;
+                wobble.amp = 0;
+                blocks = [];
+                falling = null;
+                spawnBlock();
+                return;
+            }
+            spawnBlock();
+        }
+
+        function hardDrop() {
+            if (gameOver || !falling) return;
+            if (blocks.length === 0) {
+                falling.y = getGroundY() - B;
+            } else {
+                const top = topBlock();
+                falling.y = top.y - B;
+            }
+            landBlock();
+        }
+
+        function update() {
+            if (gameOver || !falling) {
+                if (collapsing) {
+                    let anyVisible = false;
+                    for (const b of blocks) {
+                        b.vy += 0.5;
+                        b.x += b.vx;
+                        b.y += b.vy;
+                        if (b.y < H + 50) anyVisible = true;
+                    }
+                    if (!anyVisible) {
+                        collapsing = false;
+                        gameOver = true;
+                        document.getElementById('collapseMsg').style.display = '';
+                        document.getElementById('finalScore').textContent = score;
+                        document.getElementById('gameOverOverlay').classList.add('show');
+                        if (score > highScore) {
+                            highScore = score;
+                            localStorage.setItem('towerHigh', highScore);
+                            document.getElementById('highDisplay').textContent = highScore;
+                        }
+                    }
+                }
+                return;
+            }
+
+            if (blocks.length > 0) {
+                wobble.phase += 0.25;
+                if (blocks.length > 5) {
+                    wobble.amp = Math.min(wobble.amp + 0.001, 6);
+                }
+                if (blocks.length > 10) {
+                    wobble.amp = Math.min(wobble.amp + 0.002, 8);
+                }
+                if (wobble.amp >= 5.5 && blocks.length > 1 && !collapseLock) {
+                    collapseLock = true;
+                    collapsing = true;
+                    falling = null;
+                    for (let i = 0; i < blocks.length; i++) {
+                        blocks[i].vx = (Math.random() - 0.5) * 4;
+                        blocks[i].vy = -Math.random() * 4 - 1;
+                    }
+                    return;
+                }
+            } else {
+                wobble.amp = 0;
+                collapseLock = false;
+            }
+
+            if (moveLeft) falling.x -= 3;
+            if (moveRight) falling.x += 3;
+            if (falling.x < 0) falling.x = 0;
+            if (falling.x + B > W) falling.x = W - B;
+
+            falling.y += 2.5;
+
+            if (blocks.length === 0) {
+                if (falling.y + B >= getGroundY()) {
+                    falling.y = getGroundY() - B;
+                    landBlock();
+                }
+            } else {
+                const top = topBlock();
+                if (falling.y + B >= top.y) {
+                    falling.y = top.y - B;
+                    landBlock();
+                }
+            }
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, W, H);
+            const sky = SKY_THEMES[currentLevel];
+            const grad = ctx.createLinearGradient(0, 0, 0, H);
+            grad.addColorStop(0, sky[0]);
+            grad.addColorStop(0.5, sky[1]);
+            grad.addColorStop(1, sky[2]);
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, W, H);
+
+            ctx.fillStyle = sky[3];
+            for (const s of stars) ctx.fillRect(s.x, s.y, 1, 1);
+
+            const theme = BLDG_THEMES[currentLevel];
+            const groundY = H - 4;
+            for (const b of buildings) {
+                const by = groundY - b.h;
+                ctx.fillStyle = b.color;
+                ctx.fillRect(b.x, by, b.w, b.h);
+                for (const w of b.windows) {
+                    ctx.fillStyle = w.on ? theme.window : theme.off;
+                    ctx.fillRect(b.x + w.x, by + w.y, 3, 4);
+                }
+            }
+
+            ctx.fillStyle = '#1a1a2e';
+            ctx.fillRect(0, groundY, W, 4);
+
+            if (levelUpNotif > 0) {
+                levelUpNotif--;
+                ctx.fillStyle = 'rgba(255,255,255,0.9)';
+                ctx.font = 'bold 16px "Courier New", monospace';
+                ctx.textAlign = 'center';
+                ctx.fillText('LEVEL ' + (currentLevel + 1), W / 2, H / 2 - 20);
+                ctx.font = '10px "Courier New", monospace';
+                ctx.fillStyle = 'rgba(255,255,255,0.6)';
+                ctx.fillText('PERHATIKAN GOYANGAN!', W / 2, H / 2);
+            }
+
+            if (!collapsing && blocks.length > 0 && wobble.amp > 0.1) {
+                const pivotX = blocks[0].x + B / 2;
+                const pivotY = blocks[0].y + B;
+                const angle = Math.sin(wobble.phase) * wobble.amp * 0.012;
+                ctx.save();
+                ctx.translate(pivotX, pivotY);
+                ctx.rotate(angle);
+                for (let i = 0; i < blocks.length; i++) {
+                    const b = blocks[i];
+                    const dx = b.x + B / 2 - pivotX;
+                    const dy = b.y + B / 2 - pivotY;
+                    drawBlock(dx - B / 2, dy - B / 2, COLORS[i % COLORS.length], false);
+                }
+                ctx.restore();
+            } else {
+                for (let i = 0; i < blocks.length; i++) {
+                    const b = blocks[i];
+                    drawBlock(b.x, b.y, COLORS[i % COLORS.length], false);
+                }
+            }
+
+            if (!gameOver && falling) {
+                drawBlock(falling.x, falling.y, COLORS[blocks.length % COLORS.length], true);
+
+                if (blocks.length > 0) {
+                    const top = topBlock();
+                    ctx.setLineDash([3, 3]);
+                    ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+                    ctx.lineWidth = 1;
+                    ctx.beginPath();
+                    ctx.moveTo(top.x, top.y);
+                    ctx.lineTo(top.x + B, top.y);
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+                }
+            }
+
+            ctx.fillStyle = '#444';
+            ctx.font = '10px "Courier New", monospace';
+            ctx.textAlign = 'center';
+            if (blocks.length > 0) {
+                ctx.fillText('BLOK: ' + blocks.length, W / 2, 14);
+            }
+        }
+
+        function gameLoop() {
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        document.addEventListener('keydown', function(e) {
+            const k = e.key;
+            if (k === 'a' || k === 'A') { e.preventDefault(); moveLeft = true; }
+            else if (k === 'd' || k === 'D') { e.preventDefault(); moveRight = true; }
+            else if (k === ' ' || k === 'Space') { e.preventDefault(); hardDrop(); }
+            else if (k === 'r' || k === 'R') { e.preventDefault(); init(); }
+            else if (k === 'Enter' && gameOver) { e.preventDefault(); init(); }
+        });
+
+        document.addEventListener('keyup', function(e) {
+            const k = e.key;
+            if (k === 'a' || k === 'A') { e.preventDefault(); moveLeft = false; }
+            else if (k === 'd' || k === 'D') { e.preventDefault(); moveRight = false; }
+        });
+
+        function setupBtn(id, dir) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            const start = (e) => { e.preventDefault(); if (dir === 'left') moveLeft = true; else moveRight = true; el.classList.add('pressed'); };
+            const stop = (e) => { e.preventDefault(); if (dir === 'left') moveLeft = false; else moveRight = false; el.classList.remove('pressed'); };
+            el.addEventListener('touchstart', start, { passive: false });
+            el.addEventListener('touchend', stop, { passive: false });
+            el.addEventListener('touchcancel', stop, { passive: false });
+            el.addEventListener('mousedown', start);
+            el.addEventListener('mouseup', stop);
+            el.addEventListener('mouseleave', stop);
+        }
+        setupBtn('btnLeft', 'left');
+        setupBtn('btnRight', 'right');
+
+        canvas.addEventListener('click', function(e) { e.preventDefault(); hardDrop(); });
+        canvas.addEventListener('touchstart', function(e) {
+            e.preventDefault();
+            hardDrop();
+        }, { passive: false });
+
+        document.getElementById('restartBtn').addEventListener('click', init);
+        document.getElementById('restartBtn').addEventListener('touchend', function(e) { e.preventDefault(); init(); });
+
+        document.getElementById('gameOverOverlay').addEventListener('click', function(e) {
+            if (e.target === this) init();
+        });
+        document.getElementById('gameOverOverlay').addEventListener('touchend', function(e) {
+            if (e.target === this) { e.preventDefault(); init(); }
+        });
+
+        function init() {
+            currentLevel = 0;
+            levelUpNotif = 0;
+            document.getElementById('levelDisplay').textContent = '1';
+            generateCity(0);
+            blocks = [];
+            score = 0;
+            gameOver = false;
+            moveLeft = false;
+            moveRight = false;
+            wobble.amp = 0;
+            wobble.phase = 0;
+            collapseLock = false;
+            collapsing = false;
+            document.getElementById('gameOverOverlay').classList.remove('show');
+            document.getElementById('scoreDisplay').textContent = '0';
+            spawnBlock();
+        }
+
+        init();
+        gameLoop();
+    </script>
+</body>
+</html>

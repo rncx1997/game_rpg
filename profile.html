@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profil - Ternal Games</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        .profile-page {
+            max-width: 600px;
+            margin: 100px auto 60px;
+            padding: 0 20px;
+        }
+        .profile-card {
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+            overflow: hidden;
+        }
+        .profile-card-header {
+            background: linear-gradient(135deg, var(--accent), #2563eb);
+            padding: 48px 28px 28px;
+            text-align: center;
+            color: #fff;
+            position: relative;
+        }
+        .profile-card-photo {
+            width: 96px;
+            height: 96px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.2);
+            margin: 0 auto 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3.6rem;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            border: 3px solid rgba(255,255,255,0.4);
+            transition: border 0.2s;
+        }
+        .profile-card-photo:hover {
+            border-color: #fff;
+        }
+        .profile-card-photo img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 50%;
+            display: none;
+        }
+        .profile-card-photo .overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(0,0,0,0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            opacity: 0;
+            transition: opacity 0.2s;
+            border-radius: 50%;
+        }
+        .profile-card-photo:hover .overlay {
+            opacity: 1;
+        }
+        .profile-card-name {
+            font-size: 1.4rem;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+        .profile-card-join {
+            font-size: 0.8rem;
+            opacity: 0.7;
+        }
+        .profile-card-body {
+            padding: 24px 28px;
+        }
+        .profile-card-actions {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 24px;
+            justify-content: center;
+        }
+        .profile-card-actions button {
+            padding: 8px 18px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: #fff;
+            color: var(--text);
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: inherit;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+        }
+        .profile-card-actions button:hover {
+            background: var(--accent);
+            color: #fff;
+            border-color: var(--accent);
+        }
+        .profile-card-actions .btn-logout {
+            border-color: #fca5a5;
+            color: #ef4444;
+        }
+        .profile-card-actions .btn-logout:hover {
+            background: #ef4444;
+            color: #fff;
+            border-color: #ef4444;
+        }
+        .profile-stats-row {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        .profile-stat-box {
+            flex: 1;
+            text-align: center;
+            padding: 12px;
+            background: #f9f9f9;
+            border-radius: 10px;
+        }
+        .profile-stat-box .num {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--text);
+        }
+        .profile-stat-box .lbl {
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 2px;
+        }
+        .history-section-title {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+        }
+        .history-list-page {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .history-item-page {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 0;
+            border-bottom: 1px solid var(--border);
+        }
+        .history-item-page:last-child {
+            border-bottom: none;
+        }
+        .history-item-page .icon {
+            font-size: 1.2rem;
+            color: var(--accent);
+            width: 28px;
+            text-align: center;
+        }
+        .history-item-page .info {
+            flex: 1;
+        }
+        .history-item-page .title {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text);
+        }
+        .history-item-page .time {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+        .history-empty-page {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            text-align: center;
+            padding: 30px 0;
+        }
+        @media (max-width: 480px) {
+            .profile-card-header { padding: 36px 20px 20px; }
+            .profile-card-body { padding: 18px 20px; }
+            .profile-card-photo { width: 80px; height: 80px; font-size: 3rem; }
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <a href="index.html" class="logo"><i class="fas fa-gamepad"></i> Ternal Gamess</a>
+            <ul class="nav-links">
+                <li><a href="index.html">Beranda</a></li>
+                <li><a href="index.html#games">Game</a></li>
+                <li><a href="index.html#about">Tentang</a></li>
+                <li><a href="index.html#contact">Kontak</a></li>
+                <li><a href="profile.html" class="active" style="color:var(--accent);font-weight:600">Profil</a></li>
+            </ul>
+            <div class="nav-right">
+                <button class="btn-subscribe" onclick="window.location='index.html'"><i class="fas fa-bell"></i> Berlangganan</button>
+                <div class="nav-profile">
+                    <button class="btn-login" id="btnLogin" onclick="window.location='index.html'"><i class="fas fa-user"></i> Masuk</button>
+                    <div class="profile-menu" id="profileMenu" style="display:none">
+                        <div class="profile-avatar"><i class="fas fa-user-circle"></i></div>
+                        <span class="profile-name" id="profileName">User</span>
+                        <div class="profile-dropdown">
+                            <a href="profile.html"><i class="fas fa-user"></i> Profil</a>
+                            <a href="#" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Keluar</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="nav-toggle" id="navToggle"><i class="fas fa-bars"></i></div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="profile-page">
+        <div class="profile-card">
+            <div class="profile-card-header">
+                <div class="profile-card-photo" id="pageProfilePhoto" onclick="document.getElementById('photoInputPage').click()">
+                    <i class="fas fa-user-circle" id="pagePhotoIcon"></i>
+                    <img id="pagePhotoImg" alt="foto profil">
+                    <div class="overlay"><i class="fas fa-camera"></i></div>
+                </div>
+                <input type="file" id="photoInputPage" accept="image/*" style="display:none" onchange="changePhotoPage(event)">
+                <div class="profile-card-name" id="pageProfileName">-</div>
+                <div class="profile-card-join" id="pageProfileJoin">Bergabung: -</div>
+            </div>
+            <div class="profile-card-body">
+                <div class="profile-card-actions">
+                    <button onclick="editNamePage()"><i class="fas fa-pen"></i> Ganti Nama</button>
+                    <button class="btn-logout" onclick="logoutAndRedirect()"><i class="fas fa-sign-out-alt"></i> Keluar</button>
+                </div>
+                <div class="profile-stats-row">
+                    <div class="profile-stat-box"><div class="num" id="pageGameCount">0</div><div class="lbl">Game Dimainkan</div></div>
+                    <div class="profile-stat-box"><div class="num" id="pageFavCount">0</div><div class="lbl">Favorit</div></div>
+                    <div class="profile-stat-box"><div class="num" id="pageLevelCount">-</div><div class="lbl">Level Tercapai</div></div>
+                </div>
+                <div class="history-section-title"><i class="fas fa-clock"></i> Riwayat Game</div>
+                <div class="history-list-page" id="pageHistoryList">
+                    <p class="history-empty-page">Belum ada riwayat game</p>
+                </div>
+                <div class="history-section-title" style="margin-top:20px"><i class="fas fa-heart" style="color:#ef4444"></i> Game Favorit</div>
+                <div class="history-list-page" id="pageFavList">
+                    <p class="history-empty-page">Belum ada game favorit</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    function loadProfile() {
+        const name = localStorage.getItem('ternalUser');
+        if (!name) { window.location.href = 'index.html'; return; }
+
+        document.getElementById('pageProfileName').textContent = name;
+
+        const photo = localStorage.getItem('ternalPhoto_' + name);
+        const icon = document.getElementById('pagePhotoIcon');
+        const img = document.getElementById('pagePhotoImg');
+        if (photo) {
+            icon.style.display = 'none';
+            img.style.display = '';
+            img.src = photo;
+        } else {
+            icon.style.display = '';
+            img.style.display = 'none';
+        }
+
+        const join = localStorage.getItem('ternalJoin_' + name) || new Date().toLocaleDateString('id-ID');
+        document.getElementById('pageProfileJoin').textContent = 'Bergabung: ' + join;
+
+        const history = JSON.parse(localStorage.getItem('ternalHistory_' + name) || '[]');
+        document.getElementById('pageGameCount').textContent = history.length;
+
+        // Load favorites
+        const favIds = JSON.parse(localStorage.getItem('ternalFavs') || '[]');
+        const allGames = [
+            { id: 1, title: 'Super Mario Pixel' },
+            { id: 2, title: 'Pacman Pixel' },
+            { id: 3, title: 'Tetris Pixel' },
+            { id: 4, title: 'Sonic Pixel' },
+            { id: 5, title: 'Tower Block Pixel' }
+        ];
+        const favGames = allGames.filter(g => favIds.includes(g.id));
+        document.getElementById('pageFavCount').textContent = favGames.length;
+        const favList = document.getElementById('pageFavList');
+        if (favGames.length === 0) {
+            favList.innerHTML = '<p class="history-empty-page">Belum ada game favorit</p>';
+        } else {
+            favList.innerHTML = favGames.map(g =>
+                '<div class="history-item-page" style="cursor:pointer" onclick="window.location=\'index.html?play=' + g.id + '\'"><div class="icon"><i class="fas fa-heart" style="color:#ef4444"></i></div><div class="info"><div class="title">' + g.title + '</div><div class="time">Mainkan</div></div></div>'
+            ).join('');
+        }
+
+        // Count unique level-based progress from tower game (score = blocks per session)
+        const towerHigh = parseInt(localStorage.getItem('towerHigh') || '0');
+        const level = Math.min(Math.floor(towerHigh / 10) + 1, 5);
+        document.getElementById('pageLevelCount').textContent = (towerHigh > 0 ? 'Level ' + level : '-');
+
+        const list = document.getElementById('pageHistoryList');
+        if (history.length === 0) {
+            list.innerHTML = '<p class="history-empty-page">Belum ada riwayat game</p>';
+        } else {
+            list.innerHTML = history.map(h => {
+                const g = allGames.find(x => x.title === h.title);
+                const click = g ? ' onclick="window.location=\'index.html?play=' + g.id + '\'"' : '';
+                return '<div class="history-item-page" style="cursor:pointer"' + click + '><div class="icon"><i class="fas fa-gamepad"></i></div><div class="info"><div class="title">' + h.title + '</div><div class="time">' + h.time + '</div></div></div>';
+            }).join('');
+        }
+
+        // Update profile UI
+        const nameEl = document.getElementById('profileName');
+        const menu = document.getElementById('profileMenu');
+        const login = document.getElementById('btnLogin');
+        if (nameEl) { nameEl.textContent = name; }
+        if (menu) { menu.style.display = 'flex'; }
+        if (login) { login.style.display = 'none'; }
+    }
+
+    function changePhotoPage(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(ev) {
+            const data = ev.target.result;
+            const name = localStorage.getItem('ternalUser');
+            localStorage.setItem('ternalPhoto_' + name, data);
+            loadProfile();
+        };
+        reader.readAsDataURL(file);
+    }
+
+    function editNamePage() {
+        const current = document.getElementById('pageProfileName').textContent;
+        const newName = prompt('Masukkan nama baru:', current);
+        if (!newName || newName.trim().length < 2 || newName.trim() === current) return;
+        const trimmed = newName.trim();
+        const oldName = localStorage.getItem('ternalUser');
+        const users = JSON.parse(localStorage.getItem('ternalUsers') || '{}');
+        if (users[trimmed]) { alert('Nama sudah dipakai'); return; }
+        users[trimmed] = users[oldName];
+        delete users[oldName];
+        localStorage.setItem('ternalUsers', JSON.stringify(users));
+        localStorage.setItem('ternalUser', trimmed);
+        ['Photo', 'History', 'Join'].forEach(suffix => {
+            const val = localStorage.getItem('ternal' + suffix + '_' + oldName);
+            if (val) { localStorage.setItem('ternal' + suffix + '_' + trimmed, val); localStorage.removeItem('ternal' + suffix + '_' + oldName); }
+        });
+        loadProfile();
+    }
+
+    function logout() {
+        localStorage.removeItem('ternalUser');
+    }
+
+    function logoutAndRedirect() {
+        logout();
+        window.location.href = 'index.html';
+    }
+
+    // Nav toggle
+    document.getElementById('navToggle').addEventListener('click', function() {
+        const nav = document.querySelector('.nav-links');
+        nav.classList.toggle('active');
+        this.innerHTML = nav.classList.contains('active') ? '<i class="fas fa-times"></i>' : '<i class="fas fa-bars"></i>';
+    });
+    document.addEventListener('click', function(e) {
+        const pm = document.getElementById('profileMenu');
+        if (pm && !pm.contains(e.target)) pm.classList.remove('active');
+    });
+    document.getElementById('profileMenu')?.addEventListener('click', function() {
+        this.classList.toggle('active');
+    });
+
+    loadProfile();
+    </script>
+</body>
+</html>

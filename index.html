@@ -13,13 +13,28 @@
     <nav class="navbar">
         <div class="container">
             <a href="#" class="logo"><i class="fas fa-gamepad"></i> Ternal Gamess</a>
-            <div class="nav-toggle" id="navToggle"><i class="fas fa-bars"></i></div>
             <ul class="nav-links" id="navLinks">
                 <li><a href="#home" class="active">Beranda</a></li>
                 <li><a href="#games">Game</a></li>
                 <li><a href="#about">Tentang</a></li>
                 <li><a href="#contact">Kontak</a></li>
+                <li><a href="profile.html" id="navProfileLink" style="display:none">Profil</a></li>
             </ul>
+            <div class="nav-right">
+                <button class="btn-subscribe" onclick="showSubscribeModal()"><i class="fas fa-bell"></i> Berlangganan</button>
+                <div class="nav-profile" id="navProfile">
+                    <button class="btn-login" id="btnLogin" onclick="showAuthModal()"><i class="fas fa-user"></i> Masuk</button>
+                    <div class="profile-menu" id="profileMenu" style="display:none">
+                        <div class="profile-avatar" id="profileAvatar"><i class="fas fa-user-circle"></i></div>
+                        <span class="profile-name" id="profileName">User</span>
+                        <div class="profile-dropdown" id="profileDropdown">
+                            <a href="profile.html"><i class="fas fa-user"></i> Profil</a>
+                            <a href="#" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Keluar</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="nav-toggle" id="navToggle"><i class="fas fa-bars"></i></div>
+            </div>
         </div>
     </nav>
 
@@ -36,7 +51,10 @@
                 <span>Tetris Pixel</span>
             </div>
             <div class="billboard-item" style="background-image:url('https://m.gjcdn.net/fireside-post-image/800/6885345-ll-szknyn9v-v4.webp')">
-                <span>Sonic Pixel</span>
+                <div class="billboard-overlay"><span>Sonic Pixel</span></div>
+            </div>
+            <div class="billboard-item" style="background-image:url('img/tower block.webp')">
+                <div class="billboard-overlay"><span>Tower Block Pixel</span></div>
             </div>
             <div class="billboard-item" style="background-image:url('img/supermario.jpg')">
                 <span>Super Mario Pixel</span>
@@ -49,6 +67,9 @@
             </div>
             <div class="billboard-item" style="background-image:url('https://m.gjcdn.net/fireside-post-image/800/6885345-ll-szknyn9v-v4.webp')">
                 <span>Sonic Pixel</span>
+            </div>
+            <div class="billboard-item" style="background-image:url('img/tower block.webp')">
+                <span>Tower Block Pixel</span>
             </div>
         </div>
     </section>
@@ -94,7 +115,7 @@
                 <div class="about-text">
                     <p>Ternal Games menyediakan game klasik yang bisa dimainkan langsung di browser. Klik game dan mainkan sekarang.</p>
                     <div class="stats">
-                        <div class="stat"><span class="count" data-target="4">0</span> Game</div>
+                        <div class="stat"><span class="count" data-target="5">0</span> Game</div>
                         <div class="stat"><span class="count" data-target="50000">0</span>+ Dimainkan</div>
                     </div>
                 </div>
@@ -171,14 +192,14 @@
     <div id="adOverlay" class="ad-overlay hidden">
         <div class="ad-container">
             <div class="ad-video-wrap">
-                <img id="adPoster" class="ad-poster" src="" alt="Ad">
+                <video id="adVideo" class="ad-video" autoplay muted playsinline preload="auto" poster="https://img.youtube.com/vi/owGykVbfgUE/hqdefault.jpg">
+                    <source src="https://archive.org/download/old-spice-commercials/Old%20Spice%20-%20The%20Man%20Your%20Man%20Could%20Smell%20Like.mp4" type="video/mp4">
+                </video>
                 <div class="ad-branding" id="adBranding">
                     <div class="ad-brand-logo" id="adBrandLogo"></div>
                     <div class="ad-brand-name" id="adBrandName"></div>
                     <div class="ad-brand-tagline" id="adBrandTagline"></div>
                 </div>
-                <button class="ad-play-btn" id="adPlayBtn"><i class="fas fa-play"></i> Putar Iklan</button>
-                <iframe id="adVideo" src="" allow="autoplay; encrypted-media; fullscreen" allowfullscreen></iframe>
                 <div class="ad-loading" id="adLoading">
                     <div class="ad-spinner"></div>
                 </div>
@@ -189,6 +210,78 @@
                     <div class="ad-progress-bar" id="adProgressBar"></div>
                 </div>
                 <button id="adSkipBtn" class="ad-skip-btn" disabled>Skip <span id="adTimer">5</span>d</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Auth Modal -->
+    <div class="modal-overlay" id="authModal" style="display:none">
+        <div class="auth-modal">
+            <button class="auth-close" onclick="hideAuthModal()">&times;</button>
+            <h3 class="auth-title">Masuk / Daftar</h3>
+            <form id="authForm" onsubmit="handleAuth(event)">
+                <div class="auth-tabs">
+                    <button type="button" class="auth-tab active" id="tabLogin" onclick="switchAuthTab('login')">Masuk</button>
+                    <button type="button" class="auth-tab" id="tabRegister" onclick="switchAuthTab('register')">Daftar</button>
+                </div>
+                <div class="auth-field">
+                    <label>Nama</label>
+                    <input type="text" id="authName" placeholder="Nama kamu" required>
+                </div>
+                <div class="auth-field">
+                    <label>Kata Sandi</label>
+                    <input type="password" id="authPass" placeholder="Min 4 karakter" required minlength="4">
+                </div>
+                <button type="submit" class="auth-submit" id="authSubmit">Masuk</button>
+                <p class="auth-error" id="authError"></p>
+            </form>
+        </div>
+    </div>
+
+    <!-- Subscribe Modal -->
+    <div class="modal-overlay" id="subscribeModal" style="display:none">
+        <div class="auth-modal">
+            <button class="auth-close" onclick="hideSubscribeModal()">&times;</button>
+            <h3 class="auth-title"><i class="fas fa-bell" style="color:var(--accent)"></i> Berlangganan</h3>
+            <p style="color:var(--text-secondary);font-size:0.85rem;margin-bottom:16px">Dapatkan notifikasi game terbaru dan fitur eksklusif!</p>
+            <form id="subscribeForm" onsubmit="handleSubscribe(event)">
+                <div class="auth-field">
+                    <label>Nama</label>
+                    <input type="text" id="subName" placeholder="Nama kamu" required>
+                </div>
+                <div class="auth-field">
+                    <label>Email</label>
+                    <input type="email" id="subEmail" placeholder="email@contoh.com" required>
+                </div>
+                <button type="submit" class="auth-submit"><i class="fas fa-paper-plane"></i> Berlangganan</button>
+                <p class="auth-error" id="subError"></p>
+            </form>
+        </div>
+    </div>
+
+    <!-- Profile Modal -->
+    <div class="modal-overlay" id="profileModal" style="display:none">
+        <div class="profile-modal">
+            <button class="auth-close" onclick="hideProfileModal()">&times;</button>
+            <div class="profile-header">
+                <div class="profile-photo" id="profilePhoto" onclick="document.getElementById('photoInput').click()">
+                    <i class="fas fa-user-circle" id="profilePhotoIcon"></i>
+                    <img id="profilePhotoImg" style="display:none;width:100%;height:100%;border-radius:50%;object-fit:cover">
+                    <div class="profile-photo-overlay"><i class="fas fa-camera"></i></div>
+                </div>
+                <input type="file" id="photoInput" accept="image/*" style="display:none" onchange="changePhoto(event)">
+                <div class="profile-name-section">
+                    <h3 id="profileModalName">User</h3>
+                    <button class="btn-edit-name" onclick="editName()"><i class="fas fa-pen"></i> Ganti Nama</button>
+                </div>
+            </div>
+            <div class="profile-stats">
+                <div class="profile-stat"><span class="ps-label">Bergabung</span><span class="ps-value" id="profileJoin">-</span></div>
+                <div class="profile-stat"><span class="ps-label">Game Dimainkan</span><span class="ps-value" id="profileGames">0</span></div>
+            </div>
+            <h4 class="history-title">Riwayat Game</h4>
+            <div class="history-list" id="historyList">
+                <p class="history-empty">Belum ada riwayat game</p>
             </div>
         </div>
     </div>

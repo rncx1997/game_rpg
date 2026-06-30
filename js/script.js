@@ -211,6 +211,17 @@ if (counters.length > 0) {
     observer.observe(counters[0].closest('.stats'));
 }
 
+// Billboard click
+(function() {
+    const items = document.querySelectorAll('.billboard-item');
+    items.forEach((item, idx) => {
+        item.addEventListener('click', () => {
+            const game = games[idx % games.length];
+            if (game) openModal(game);
+        });
+    });
+})();
+
 // Contact form
 document.getElementById('contactForm').addEventListener('submit', (e) => {
     e.preventDefault();

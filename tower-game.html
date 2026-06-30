@@ -191,6 +191,62 @@
         let collapseLock = false;
         let collapsing = false;
 
+        // Audio — generate WAV beep data URLs
+        function makeBeepData(freq, duration) {
+            const rate = 44100, len = Math.ceil(rate * duration);
+            const buf = new ArrayBuffer(44 + len * 2);
+            const dv = new DataView(buf);
+            function w(s, v) { dv.setUint32(s, v, true); }
+            function w2(s, v) { dv.setUint16(s, v, true); }
+            w(0, 0x46464952); w(4, 36 + len * 2); w(8, 0x45564157);
+            w(12, 0x20746d66); w(16, 16); w2(20, 1); w2(22, 1);
+            w(24, rate); w(28, rate * 2); w2(32, 2); w2(34, 16);
+            w(36, 0x61746164); w(40, len * 2);
+            const amp = 20000;
+            for (let i = 0; i < len; i++) {
+                const t = i / rate;
+                const env = 1 - t / duration;
+                const val = Math.sin(2 * Math.PI * freq * t) * amp * env;
+                dv.setInt16(44 + i * 2, Math.max(-32768, Math.min(32767, val)), true);
+            }
+            return new Blob([buf], { type: 'audio/wav' });
+        }
+        const BEEP_180 = makeBeepData(180, 0.08);
+        const BEEP_200 = makeBeepData(200, 0.05);
+        const BEEP_140 = makeBeepData(140, 0.05);
+        const BEEP_100 = makeBeepData(100, 0.05);
+        const BEEP_60 = makeBeepData(60, 0.3);
+        const BEEP_250 = makeBeepData(250, 0.04);
+        const BEEP_180b = makeBeepData(180, 0.04);
+        const BEEP_120 = makeBeepData(120, 0.04);
+        const BEEP_80 = makeBeepData(80, 0.04);
+        const BEEP_50 = makeBeepData(50, 0.4);
+        const BEEP_523 = makeBeepData(523, 0.1);
+        const BEEP_659 = makeBeepData(659, 0.1);
+        const BEEP_784 = makeBeepData(784, 0.15);
+        const BEEP_440 = makeBeepData(440, 0.04);
+        // unlock audio on first user gesture, then use Audio elements
+        let audioUnlocked = false;
+        function unlockAudio() {
+            if (audioUnlocked) return true;
+            try {
+                const a = new Audio(URL.createObjectURL(BEEP_180));
+                a.volume = 0.01;
+                a.play().then(function(){ audioUnlocked = true; }).catch(function(){});
+            } catch(e) {}
+            return false;
+        }
+        function playUrl(blob, delay) {
+            if (!audioUnlocked) return;
+            if (delay) {
+                setTimeout(function() {
+                    try { const a = new Audio(URL.createObjectURL(blob)); a.volume = 0.5; a.play(); } catch(e) {}
+                }, delay);
+            } else {
+                try { const a = new Audio(URL.createObjectURL(blob)); a.volume = 0.5; a.play(); } catch(e) {}
+            }
+        }
+
         function drawBlock(x, y, c, highlight) {
             ctx.fillStyle = c;
             ctx.fillRect(x, y, B, B);
@@ -246,6 +302,7 @@
                     localStorage.setItem('towerHigh', highScore);
                     document.getElementById('highDisplay').textContent = highScore;
                 }
+                playUrl(BEEP_180);
                 spawnBlock();
                 return;
             }
@@ -255,6 +312,10 @@
             if (!ok) {
                 document.getElementById('collapseMsg').style.display = 'none';
                 gameOver = true;
+                playUrl(BEEP_200);
+                playUrl(BEEP_140, 70);
+                playUrl(BEEP_100, 140);
+                playUrl(BEEP_60, 210);
                 document.getElementById('finalScore').textContent = score;
                 document.getElementById('gameOverOverlay').classList.add('show');
                 if (score > highScore) {
@@ -279,6 +340,7 @@
                 localStorage.setItem('towerHigh', highScore);
                 document.getElementById('highDisplay').textContent = highScore;
             }
+            playUrl(BEEP_180);
             if (landY <= 0) {
                 document.getElementById('collapseMsg').style.display = 'none';
                 gameOver = true;
@@ -294,6 +356,9 @@
                 wobble.amp = 0;
                 blocks = [];
                 falling = null;
+                playUrl(BEEP_523);
+                playUrl(BEEP_659, 120);
+                playUrl(BEEP_784, 240);
                 spawnBlock();
                 return;
             }
@@ -302,6 +367,7 @@
 
         function hardDrop() {
             if (gameOver || !falling) return;
+            playUrl(BEEP_440);
             if (blocks.length === 0) {
                 falling.y = getGroundY() - B;
             } else {
@@ -353,6 +419,11 @@
                         blocks[i].vx = (Math.random() - 0.5) * 4;
                         blocks[i].vy = -Math.random() * 4 - 1;
                     }
+                    playUrl(BEEP_250);
+                    playUrl(BEEP_180b, 60);
+                    playUrl(BEEP_120, 120);
+                    playUrl(BEEP_80, 180);
+                    playUrl(BEEP_50, 240);
                     return;
                 }
             } else {
@@ -472,6 +543,7 @@
         }
 
         document.addEventListener('keydown', function(e) {
+            unlockAudio();
             const k = e.key;
             if (k === 'a' || k === 'A') { e.preventDefault(); moveLeft = true; }
             else if (k === 'd' || k === 'D') { e.preventDefault(); moveRight = true; }
@@ -489,7 +561,7 @@
         function setupBtn(id, dir) {
             const el = document.getElementById(id);
             if (!el) return;
-            const start = (e) => { e.preventDefault(); if (dir === 'left') moveLeft = true; else moveRight = true; el.classList.add('pressed'); };
+            const start = (e) => { e.preventDefault(); unlockAudio(); if (dir === 'left') moveLeft = true; else moveRight = true; el.classList.add('pressed'); };
             const stop = (e) => { e.preventDefault(); if (dir === 'left') moveLeft = false; else moveRight = false; el.classList.remove('pressed'); };
             el.addEventListener('touchstart', start, { passive: false });
             el.addEventListener('touchend', stop, { passive: false });
@@ -501,9 +573,10 @@
         setupBtn('btnLeft', 'left');
         setupBtn('btnRight', 'right');
 
-        canvas.addEventListener('click', function(e) { e.preventDefault(); hardDrop(); });
+        canvas.addEventListener('click', function(e) { e.preventDefault(); unlockAudio(); hardDrop(); });
         canvas.addEventListener('touchstart', function(e) {
             e.preventDefault();
+            unlockAudio();
             hardDrop();
         }, { passive: false });
 

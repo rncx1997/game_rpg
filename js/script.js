@@ -126,15 +126,15 @@ function showAd(callback) {
     document.getElementById('adBrandName').textContent = AD_DATA.brand;
     document.getElementById('adBrandTagline').textContent = AD_DATA.tagline;
 
-    adVideo.src = 'https://www.youtube.com/embed/' + AD_DATA.videoId + '?autoplay=1&mute=1&controls=0&modestbranding=1&rel=0&playsinline=1';
+    adVideo.src = 'https://www.youtube.com/embed/' + AD_DATA.videoId + '?autoplay=1&mute=1&controls=0&modestbranding=1&rel=0&playsinline=1&enablejsapi=1';
 
     adLoading.classList.remove('hidden');
-    setTimeout(() => adLoading.classList.add('hidden'), 2000);
+    setTimeout(function() { adLoading.classList.add('hidden'); }, 2000);
 
     adOverlay.classList.remove('hidden');
 
     clearInterval(adInterval);
-    adInterval = setInterval(() => {
+    adInterval = setInterval(function() {
         adCountdown--;
         var pct = ((5 - adCountdown) / 5) * 100;
         document.getElementById('adProgressBar').style.width = Math.min(pct, 100) + '%';
@@ -177,10 +177,14 @@ adSkipBtn.addEventListener('touchend', function(e) {
 
 document.getElementById('adPlayBtn').addEventListener('click', function() {
     this.classList.remove('visible');
+    document.getElementById('adPoster').classList.add('hidden');
+    adVideo.src = 'https://www.youtube.com/embed/' + AD_DATA.videoId + '?autoplay=1&mute=0&controls=0&modestbranding=1&rel=0&playsinline=1';
 });
 document.getElementById('adPlayBtn').addEventListener('touchend', function(e) {
-    this.classList.remove('visible');
     e.preventDefault();
+    this.classList.remove('visible');
+    document.getElementById('adPoster').classList.add('hidden');
+    adVideo.src = 'https://www.youtube.com/embed/' + AD_DATA.videoId + '?autoplay=1&mute=0&controls=0&modestbranding=1&rel=0&playsinline=1';
 });
 
 gamePlayModal.addEventListener('click', (e) => {

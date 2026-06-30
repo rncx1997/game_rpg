@@ -253,6 +253,7 @@
 
     <script>
     function loadProfile() {
+        try {
         const name = localStorage.getItem('ternalUser');
         if (!name) { window.location.href = 'index.html'; return; }
 
@@ -276,7 +277,6 @@
         const history = JSON.parse(localStorage.getItem('ternalHistory_' + name) || '[]');
         document.getElementById('pageGameCount').textContent = history.length;
 
-        // Load favorites
         const favIds = JSON.parse(localStorage.getItem('ternalFavs') || '[]');
         const allGames = [
             { id: 1, title: 'Super Mario Pixel' },
@@ -296,7 +296,6 @@
             ).join('');
         }
 
-        // Count unique level-based progress from tower game (score = blocks per session)
         const towerHigh = parseInt(localStorage.getItem('towerHigh') || '0');
         const level = Math.min(Math.floor(towerHigh / 10) + 1, 5);
         document.getElementById('pageLevelCount').textContent = (towerHigh > 0 ? 'Level ' + level : '-');
@@ -312,13 +311,13 @@
             }).join('');
         }
 
-        // Update profile UI
         const nameEl = document.getElementById('profileName');
         const menu = document.getElementById('profileMenu');
         const login = document.getElementById('btnLogin');
-        if (nameEl) { nameEl.textContent = name; }
-        if (menu) { menu.style.display = 'flex'; }
-        if (login) { login.style.display = 'none'; }
+        if (nameEl) nameEl.textContent = name;
+        if (menu) menu.style.display = 'flex';
+        if (login) login.style.display = 'none';
+        } catch (e) { console.error('Profile error:', e); alert('Error: ' + e.message); }
     }
 
     function changePhotoPage(e) {
@@ -372,11 +371,11 @@
         const pm = document.getElementById('profileMenu');
         if (pm && !pm.contains(e.target)) pm.classList.remove('active');
     });
-    document.getElementById('profileMenu')?.addEventListener('click', function() {
+    document.getElementById('profileMenu').addEventListener('click', function() {
         this.classList.toggle('active');
     });
 
-    loadProfile();
+    try { loadProfile(); } catch(e) { alert('Error: ' + e.message); }
     </script>
 </body>
 </html>

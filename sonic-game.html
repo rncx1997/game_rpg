@@ -1,0 +1,985 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Sonic Pixel - Main Game</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; -webkit-user-select: none; }
+        body {
+            background: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: 'Courier New', monospace;
+            overflow: hidden;
+            touch-action: none;
+        }
+        .game-wrapper { position: relative; width: 100%; max-width: 960px; text-align: center; }
+        .game-header {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 8px 14px; background: #0a0a2e;
+            border: 2px solid #1a1a4e; border-bottom: none;
+            color: #fff; font-size: 14px; font-weight: bold;
+        }
+        .game-header .rings { color: #fbbf24; }
+        .game-header .score { color: #60a5fa; }
+        canvas {
+            display: block; width: 100%;
+            border: 2px solid #1a1a4e;
+            image-rendering: pixelated; image-rendering: crisp-edges;
+        }
+        .controls-info {
+            color: #555; font-size: 10px; padding: 5px 8px;
+            background: #0a0a2e; border: 2px solid #1a1a4e; border-top: none;
+        }
+        .controls-info kbd {
+            background: #1a1a2e; padding: 1px 5px; border: 1px solid #333;
+            color: #888; font-size: 9px;
+        }
+        .back-link {
+            display: inline-block; margin-top: 4px; color: #444;
+            text-decoration: none; font-size: 11px; letter-spacing: 1px;
+        }
+        .touch-controls {
+            display: block; position: absolute;
+            bottom: 30px; left: 0; right: 0;
+            pointer-events: none; z-index: 10;
+        }
+        .dpad {
+            position: absolute; bottom: 0; left: 50%; transform: translateX(-50%);
+            display: grid;
+            grid-template-columns: 56px 56px 56px;
+            grid-template-rows: 56px;
+            gap: 4px;
+            pointer-events: auto;
+        }
+        .ctrl-btn {
+            width: 56px; height: 56px; border-radius: 0;
+            border: 2px solid rgba(255,255,255,0.15);
+            background: rgba(255,255,255,0.05);
+            color: rgba(255,255,255,0.6);
+            font-size: 22px;
+            display: flex; align-items: center; justify-content: center;
+            touch-action: none; cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
+            box-shadow: 2px 2px 0 rgba(0,0,0,0.4);
+        }
+        .ctrl-btn:active, .ctrl-btn.pressed {
+            background: rgba(255,255,255,0.15);
+            transform: translate(1px, 1px);
+            box-shadow: 1px 1px 0 rgba(0,0,0,0.4);
+        }
+        @media (max-width: 400px) {
+            .dpad { grid-template-columns: 48px 48px 48px; gap: 3px; }
+            .ctrl-btn { width: 48px; height: 48px; font-size: 18px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-wrapper">
+        <div class="game-header">
+            <span>SONIC <span style="color:#3b82f6;">PIXEL</span></span>
+            <span>LEVEL: <span style="color:#f59e0b;" id="levelDisplay">1</span>/5</span>
+            <span>RINGS: <span class="rings" id="ringDisplay">0</span></span>
+            <span>SKOR: <span class="score" id="scoreDisplay">0</span></span>
+        </div>
+        <canvas id="gameCanvas" width="960" height="540"></canvas>
+        <div class="touch-controls">
+            <div class="dpad">
+                <button class="ctrl-btn" id="btnLeft">&#x25C0;</button>
+                <button class="ctrl-btn" id="btnJump">LOM</button>
+                <button class="ctrl-btn" id="btnRight">&#x25B6;</button>
+            </div>
+        </div>
+        <div class="controls-info">
+            <kbd>&larr;</kbd><kbd>&rarr;</kbd> Gerak &nbsp; <kbd>Spasi</kbd> Lompat &nbsp; <kbd>R</kbd> Restart
+        </div>
+        <a href="index.html" class="back-link">&larr; KEMBALI</a>
+    </div>
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const ringSpan = document.getElementById('ringDisplay');
+        const scoreSpan = document.getElementById('scoreDisplay');
+        const levelSpan = document.getElementById('levelDisplay');
+
+        const GRAVITY = 0.5;
+        const JUMP = -11;
+        const MAX_SPEED = 8;
+        const ACCEL = 0.3;
+        const FRICTION = 0.85;
+        const TILE = 32;
+        const GROUND_Y = 480;
+        const LEVELS = [
+            {
+                name: 'Green Hill', width: 4000,
+                skyTop: '#1e40af', skyMid: '#60a5fa', skyBot: '#93c5fd',
+                groundColor: '#22c55e', groundDark: '#15803d', groundLine: '#16a34a',
+                brickColor: '#a78bfa', brickStroke: '#7c3aed',
+                hillColor: '#22c55e', hillColor2: '#16a34a',
+                gaps: [
+                    { start: 1000, end: 1120 },
+                    { start: 2000, end: 2120 },
+                    { start: 3200, end: 3300 }
+                ],
+                floatPlats: [
+                    { x: 350, y: 380, w: 3 }, { x: 650, y: 340, w: 2 },
+                    { x: 900, y: 370, w: 3 }, { x: 1200, y: 350, w: 2 },
+                    { x: 1500, y: 360, w: 3 }, { x: 1800, y: 320, w: 2 },
+                    { x: 2200, y: 370, w: 3 }, { x: 2600, y: 340, w: 2 },
+                    { x: 2900, y: 360, w: 3 }, { x: 3200, y: 350, w: 2 },
+                    { x: 3500, y: 370, w: 3 }
+                ],
+                rings: [
+                    { x: 180, y: 420 }, { x: 210, y: 420 }, { x: 240, y: 420 },
+                    { x: 400, y: 340 }, { x: 430, y: 310 },
+                    { x: 550, y: 420 }, { x: 580, y: 420 },
+                    { x: 750, y: 340 }, { x: 780, y: 340 },
+                    { x: 960, y: 420 }, { x: 990, y: 390 },
+                    { x: 1150, y: 310 }, { x: 1180, y: 310 },
+                    { x: 1350, y: 420 }, { x: 1380, y: 420 }, { x: 1410, y: 420 },
+                    { x: 1600, y: 320 }, { x: 1630, y: 320 },
+                    { x: 1900, y: 420 }, { x: 1930, y: 420 },
+                    { x: 2150, y: 340 }, { x: 2180, y: 340 },
+                    { x: 2400, y: 420 }, { x: 2430, y: 390 },
+                    { x: 2700, y: 340 }, { x: 2730, y: 340 },
+                    { x: 2950, y: 420 }, { x: 2980, y: 420 },
+                    { x: 3150, y: 310 }, { x: 3180, y: 310 },
+                    { x: 3400, y: 420 }, { x: 3430, y: 420 },
+                    { x: 3650, y: 340 }, { x: 3680, y: 340 },
+                    { x: 3850, y: 420 }, { x: 3880, y: 420 }
+                ],
+                springs: [
+                    { x: 1190, y: 0 }, { x: 2200, y: 0 }
+                ],
+                enemies: [
+                    { x: 450, range: 100 }, { x: 850, range: 80 },
+                    { x: 1300, range: 80 }, { x: 1700, range: 100 },
+                    { x: 2500, range: 80 }, { x: 3100, range: 100 },
+                    { x: 3600, range: 80 }
+                ],
+                flagX: 3850
+            },
+            {
+                name: 'Aquatic', width: 4200,
+                skyTop: '#0f766e', skyMid: '#14b8a6', skyBot: '#99f6e4',
+                groundColor: '#0d9488', groundDark: '#0f766e', groundLine: '#115e59',
+                brickColor: '#f59e0b', brickStroke: '#d97706',
+                hillColor: '#0ea5e9', hillColor2: '#0284c7',
+                gaps: [
+                    { start: 800, end: 960 },
+                    { start: 1500, end: 1640 },
+                    { start: 2400, end: 2560 },
+                    { start: 3500, end: 3640 }
+                ],
+                floatPlats: [
+                    { x: 300, y: 380, w: 2 }, { x: 550, y: 340, w: 3 },
+                    { x: 700, y: 300, w: 2 }, { x: 1000, y: 360, w: 3 },
+                    { x: 1250, y: 340, w: 2 }, { x: 1450, y: 300, w: 3 },
+                    { x: 1700, y: 350, w: 2 }, { x: 2000, y: 320, w: 3 },
+                    { x: 2250, y: 370, w: 2 }, { x: 2500, y: 340, w: 3 },
+                    { x: 2750, y: 300, w: 2 }, { x: 3000, y: 360, w: 3 },
+                    { x: 3300, y: 340, w: 2 }, { x: 3700, y: 320, w: 3 },
+                    { x: 3950, y: 350, w: 2 }
+                ],
+                rings: [
+                    { x: 200, y: 420 }, { x: 230, y: 420 },
+                    { x: 380, y: 340 }, { x: 410, y: 310 }, { x: 440, y: 340 },
+                    { x: 600, y: 300 }, { x: 630, y: 300 },
+                    { x: 900, y: 420 }, { x: 930, y: 420 },
+                    { x: 1080, y: 330 }, { x: 1110, y: 330 },
+                    { x: 1300, y: 310 }, { x: 1330, y: 310 },
+                    { x: 1500, y: 260 }, { x: 1530, y: 260 }, { x: 1560, y: 260 },
+                    { x: 1750, y: 420 }, { x: 1780, y: 420 },
+                    { x: 1950, y: 300 }, { x: 1980, y: 300 },
+                    { x: 2150, y: 340 }, { x: 2180, y: 340 },
+                    { x: 2350, y: 420 }, { x: 2380, y: 420 },
+                    { x: 2550, y: 310 }, { x: 2580, y: 310 },
+                    { x: 2800, y: 260 }, { x: 2830, y: 260 },
+                    { x: 3050, y: 420 }, { x: 3080, y: 420 }, { x: 3110, y: 420 },
+                    { x: 3350, y: 310 }, { x: 3380, y: 310 },
+                    { x: 3650, y: 420 }, { x: 3680, y: 390 },
+                    { x: 3850, y: 310 }, { x: 3880, y: 310 },
+                    { x: 4050, y: 420 }, { x: 4080, y: 420 }
+                ],
+                springs: [
+                    { x: 990, y: 0 }, { x: 1990, y: 0 }, { x: 3690, y: 0 }
+                ],
+                enemies: [
+                    { x: 400, range: 80 }, { x: 750, range: 100 },
+                    { x: 1100, range: 80 }, { x: 1600, range: 100 },
+                    { x: 2050, range: 80 }, { x: 2600, range: 100 },
+                    { x: 3200, range: 80 }, { x: 3800, range: 80 }
+                ],
+                flagX: 4050
+            },
+            {
+                name: 'Cave', width: 3800,
+                skyTop: '#1c1917', skyMid: '#292524', skyBot: '#44403c',
+                groundColor: '#78716c', groundDark: '#57534e', groundLine: '#a8a29e',
+                brickColor: '#92400e', brickStroke: '#78350f',
+                hillColor: '#57534e', hillColor2: '#44403c',
+                gaps: [
+                    { start: 600, end: 720 },
+                    { start: 1100, end: 1200 },
+                    { start: 1800, end: 1920 },
+                    { start: 2600, end: 2760 },
+                    { start: 3300, end: 3400 }
+                ],
+                floatPlats: [
+                    { x: 200, y: 380, w: 2 }, { x: 450, y: 340, w: 2 },
+                    { x: 700, y: 370, w: 2 }, { x: 950, y: 340, w: 2 },
+                    { x: 1250, y: 360, w: 2 }, { x: 1500, y: 320, w: 2 },
+                    { x: 1750, y: 370, w: 2 }, { x: 2000, y: 340, w: 2 },
+                    { x: 2250, y: 360, w: 2 }, { x: 2500, y: 330, w: 2 },
+                    { x: 2800, y: 370, w: 2 }, { x: 3100, y: 340, w: 2 },
+                    { x: 3450, y: 360, w: 2 }
+                ],
+                rings: [
+                    { x: 250, y: 340 }, { x: 280, y: 340 },
+                    { x: 500, y: 310 }, { x: 530, y: 310 },
+                    { x: 850, y: 420 }, { x: 880, y: 420 },
+                    { x: 1050, y: 310 }, { x: 1080, y: 310 },
+                    { x: 1300, y: 420 }, { x: 1330, y: 420 },
+                    { x: 1550, y: 300 }, { x: 1580, y: 300 },
+                    { x: 1950, y: 420 }, { x: 1980, y: 420 },
+                    { x: 2200, y: 340 }, { x: 2230, y: 340 },
+                    { x: 2550, y: 310 }, { x: 2580, y: 310 },
+                    { x: 2850, y: 420 }, { x: 2880, y: 390 },
+                    { x: 3150, y: 310 }, { x: 3180, y: 310 },
+                    { x: 3500, y: 420 }, { x: 3530, y: 420 }
+                ],
+                springs: [
+                    { x: 700, y: 0 }, { x: 2000, y: 0 }
+                ],
+                enemies: [
+                    { x: 300, range: 60 }, { x: 550, range: 80 },
+                    { x: 850, range: 60 }, { x: 1200, range: 80 },
+                    { x: 1600, range: 60 }, { x: 2100, range: 80 },
+                    { x: 2700, range: 60 }, { x: 3200, range: 80 },
+                    { x: 3550, range: 60 }
+                ],
+                flagX: 3650
+            },
+            {
+                name: 'Factory', width: 4000,
+                skyTop: '#1e293b', skyMid: '#334155', skyBot: '#64748b',
+                groundColor: '#64748b', groundDark: '#475569', groundLine: '#94a3b8',
+                brickColor: '#ef4444', brickStroke: '#dc2626',
+                hillColor: '#64748b', hillColor2: '#475569',
+                gaps: [
+                    { start: 900, end: 1000 },
+                    { start: 1700, end: 1840 },
+                    { start: 2700, end: 2840 }
+                ],
+                floatPlats: [
+                    { x: 300, y: 380, w: 3 }, { x: 550, y: 340, w: 2 },
+                    { x: 800, y: 300, w: 2 }, { x: 1050, y: 360, w: 3 },
+                    { x: 1300, y: 340, w: 2 }, { x: 1500, y: 300, w: 2 },
+                    { x: 1650, y: 360, w: 2 }, { x: 1900, y: 320, w: 3 },
+                    { x: 2200, y: 370, w: 2 }, { x: 2500, y: 340, w: 3 },
+                    { x: 2800, y: 300, w: 2 }, { x: 3100, y: 360, w: 3 },
+                    { x: 3400, y: 340, w: 2 }, { x: 3650, y: 320, w: 3 }
+                ],
+                rings: [
+                    { x: 200, y: 420 }, { x: 230, y: 420 },
+                    { x: 400, y: 340 }, { x: 430, y: 310 },
+                    { x: 600, y: 310 }, { x: 630, y: 310 },
+                    { x: 850, y: 270 }, { x: 880, y: 270 },
+                    { x: 1100, y: 420 }, { x: 1130, y: 420 },
+                    { x: 1350, y: 310 }, { x: 1380, y: 310 },
+                    { x: 1550, y: 270 }, { x: 1580, y: 270 },
+                    { x: 1850, y: 420 }, { x: 1880, y: 420 },
+                    { x: 2100, y: 340 }, { x: 2130, y: 340 },
+                    { x: 2350, y: 420 }, { x: 2380, y: 420 },
+                    { x: 2550, y: 310 }, { x: 2580, y: 310 },
+                    { x: 2850, y: 270 }, { x: 2880, y: 270 },
+                    { x: 3150, y: 420 }, { x: 3180, y: 390 },
+                    { x: 3450, y: 310 }, { x: 3480, y: 310 },
+                    { x: 3700, y: 420 }, { x: 3730, y: 420 }, { x: 3760, y: 420 },
+                    { x: 3900, y: 340 }, { x: 3930, y: 340 }
+                ],
+                springs: [
+                    { x: 1040, y: 0 }, { x: 1890, y: 0 }, { x: 2800, y: 0 }, { x: 3650, y: 0 }
+                ],
+                enemies: [
+                    { x: 350, range: 80 }, { x: 700, range: 100 },
+                    { x: 1150, range: 80 }, { x: 1600, range: 80 },
+                    { x: 2100, range: 100 }, { x: 2650, range: 80 },
+                    { x: 3300, range: 100 }, { x: 3800, range: 80 }
+                ],
+                flagX: 3850
+            },
+            {
+                name: 'Sky', width: 4500,
+                skyTop: '#7e22ce', skyMid: '#a855f7', skyBot: '#d8b4fe',
+                groundColor: '#eab308', groundDark: '#ca8a04', groundLine: '#facc15',
+                brickColor: '#22d3ee', brickStroke: '#06b6d4',
+                hillColor: '#a855f7', hillColor2: '#9333ea',
+                gaps: [
+                    { start: 1000, end: 1160 },
+                    { start: 2200, end: 2380 },
+                    { start: 3400, end: 3580 }
+                ],
+                floatPlats: [
+                    { x: 250, y: 380, w: 2 }, { x: 450, y: 340, w: 3 },
+                    { x: 700, y: 300, w: 2 }, { x: 950, y: 360, w: 3 },
+                    { x: 1200, y: 340, w: 2 }, { x: 1400, y: 300, w: 3 },
+                    { x: 1650, y: 350, w: 2 }, { x: 1900, y: 320, w: 3 },
+                    { x: 2150, y: 370, w: 2 }, { x: 2400, y: 340, w: 3 },
+                    { x: 2600, y: 300, w: 2 }, { x: 2900, y: 360, w: 3 },
+                    { x: 3150, y: 340, w: 2 }, { x: 3450, y: 320, w: 3 },
+                    { x: 3700, y: 350, w: 2 }, { x: 4000, y: 300, w: 3 },
+                    { x: 4250, y: 340, w: 2 }
+                ],
+                rings: [
+                    { x: 150, y: 420 }, { x: 180, y: 420 }, { x: 210, y: 420 },
+                    { x: 350, y: 340 }, { x: 380, y: 310 }, { x: 410, y: 340 },
+                    { x: 550, y: 300 }, { x: 580, y: 300 },
+                    { x: 750, y: 270 }, { x: 780, y: 270 },
+                    { x: 1000, y: 420 }, { x: 1030, y: 420 },
+                    { x: 1250, y: 310 }, { x: 1280, y: 310 },
+                    { x: 1450, y: 270 }, { x: 1480, y: 270 },
+                    { x: 1700, y: 420 }, { x: 1730, y: 390 },
+                    { x: 1950, y: 300 }, { x: 1980, y: 300 },
+                    { x: 2200, y: 340 }, { x: 2230, y: 340 },
+                    { x: 2450, y: 310 }, { x: 2480, y: 310 },
+                    { x: 2650, y: 270 }, { x: 2680, y: 270 },
+                    { x: 2950, y: 420 }, { x: 2980, y: 420 },
+                    { x: 3200, y: 310 }, { x: 3230, y: 310 },
+                    { x: 3500, y: 300 }, { x: 3530, y: 300 },
+                    { x: 3750, y: 420 }, { x: 3780, y: 420 }, { x: 3810, y: 420 },
+                    { x: 3950, y: 270 }, { x: 3980, y: 270 },
+                    { x: 4100, y: 310 }, { x: 4130, y: 310 },
+                    { x: 4300, y: 420 }, { x: 4330, y: 420 }
+                ],
+                springs: [
+                    { x: 940, y: 0 }, { x: 2140, y: 0 }, { x: 3440, y: 0 }
+                ],
+                enemies: [
+                    { x: 500, range: 80 }, { x: 1050, range: 100 },
+                    { x: 1750, range: 80 }, { x: 2500, range: 100 },
+                    { x: 3250, range: 80 }, { x: 4050, range: 100 }
+                ],
+                flagX: 4350
+            }
+        ];
+        let score = 0;
+        let rings = 0;
+        let gameOver = false;
+        let gameWin = false;
+        let currentLevel = 0;
+        let cameraX = 0;
+        let keys = {};
+        let platforms = [];
+        let ringList = [];
+        let enemies = [];
+        let springs = [];
+        let flag = null;
+
+        let audioCtx = null;
+        function getAudioCtx() {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            return audioCtx;
+        }
+        function beep(f, dur, type, vol) {
+            try {
+                const ctx = getAudioCtx();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = type || 'square';
+                osc.frequency.setValueAtTime(f, ctx.currentTime);
+                gain.gain.setValueAtTime(vol || 0.06, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start();
+                osc.stop(ctx.currentTime + dur);
+            } catch(e) {}
+        }
+        function playRing() { beep(880, 0.06, 'sine', 0.06); setTimeout(() => beep(1100, 0.06, 'sine', 0.05), 50); }
+        function playJump() { beep(400, 0.05, 'sine', 0.05); setTimeout(() => beep(600, 0.05, 'sine', 0.04), 40); }
+        function playSpring() { beep(500, 0.08, 'sine', 0.07); setTimeout(() => beep(800, 0.08, 'sine', 0.06), 60); }
+        function playStomp() { beep(300, 0.1, 'square', 0.06); setTimeout(() => beep(100, 0.15, 'square', 0.04), 80); }
+        function playHurt() { beep(200, 0.15, 'square', 0.08); setTimeout(() => beep(150, 0.2, 'square', 0.06), 100); }
+        function playWin() { [523,659,784,1047].forEach((f,i) => setTimeout(() => beep(f,0.12,'sine',0.06), i*100)); }
+        function playGameOver() { [400,350,300,200,120].forEach((f,i) => setTimeout(() => beep(f,0.12,'sawtooth',0.06), i*120)); }
+
+        const sonic = {
+            x: 80, y: 300, w: 24, h: 32,
+            vx: 0, vy: 0, onGround: false,
+            facing: 1, frame: 0, frameTimer: 0,
+            spinning: false, spinTimer: 0,
+            rings: 0, invincible: 0
+        };
+
+        function buildLevel() {
+            platforms = []; ringList = []; enemies = []; springs = []; flag = null;
+            const lev = LEVELS[currentLevel];
+
+            // Ground
+            for (let x = 0; x < lev.width; x += TILE) {
+                for (let row = 0; row < 3; row++) {
+                    platforms.push({ x, y: GROUND_Y + row * TILE, w: TILE, h: TILE, type: 'ground' });
+                }
+            }
+
+            // Gaps
+            for (const g of lev.gaps) {
+                platforms = platforms.filter(p => {
+                    if (p.x >= g.start && p.x < g.end && p.y >= GROUND_Y) return false;
+                    return true;
+                });
+            }
+
+            // Floating platforms
+            for (const p of lev.floatPlats) {
+                for (let i = 0; i < p.w; i++) {
+                    platforms.push({ x: p.x + i * TILE, y: p.y, w: TILE, h: TILE, type: 'brick' });
+                }
+            }
+
+            // Rings
+            for (const r of lev.rings) {
+                ringList.push({ x: r.x, y: r.y, w: 16, h: 16, collected: false });
+            }
+
+            // Springs
+            for (const s of lev.springs) {
+                springs.push({
+                    x: s.x, y: GROUND_Y - TILE - 16, w: TILE, h: 16
+                });
+            }
+
+            // Enemies
+            for (const e of lev.enemies) {
+                enemies.push({
+                    x: e.x, y: GROUND_Y - TILE, w: 28, h: 28,
+                    vx: -2, alive: true, range: e.range || 80, startX: e.x
+                });
+            }
+
+            flag = { x: lev.flagX, y: 200 };
+        }
+
+        function rectCollide(a, b) {
+            return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
+        }
+
+        function handleCollisions() {
+            sonic.onGround = false;
+            const viewLeft = cameraX - TILE;
+            const viewRight = cameraX + canvas.width + TILE;
+
+            for (const plat of platforms) {
+                if (plat.x > viewRight || plat.x + plat.w < viewLeft) continue;
+                if (!rectCollide(
+                    { x: sonic.x, y: sonic.y, w: sonic.w, h: sonic.h },
+                    { x: plat.x, y: plat.y, w: plat.w, h: plat.h }
+                )) continue;
+
+                const sc = sonic.x + sonic.w / 2;
+                const sy = sonic.y + sonic.h / 2;
+                const pc = plat.x + plat.w / 2;
+                const py = plat.y + plat.h / 2;
+                const ox = (sonic.w / 2 + plat.w / 2) - Math.abs(sc - pc);
+                const oy = (sonic.h / 2 + plat.h / 2) - Math.abs(sy - py);
+
+                if (ox < oy) {
+                    if (sc < pc) { sonic.x = plat.x - sonic.w; sonic.vx = 0; }
+                    else { sonic.x = plat.x + plat.w; sonic.vx = 0; }
+                } else {
+                    if (sy < py) {
+                        sonic.y = plat.y - sonic.h; sonic.vy = 0; sonic.onGround = true;
+                    } else {
+                        sonic.y = plat.y + plat.h; sonic.vy = 2;
+                    }
+                }
+            }
+
+            // Rings
+            for (const r of ringList) {
+                if (r.collected) continue;
+                if (r.x > viewRight || r.x + r.w < viewLeft) continue;
+                if (rectCollide(
+                    { x: sonic.x, y: sonic.y, w: sonic.w, h: sonic.h },
+                    { x: r.x, y: r.y, w: r.w, h: r.h }
+                )) {
+                    r.collected = true;
+                    rings++;
+                    score += 100;
+                    playRing();
+                    updateDisplay();
+                }
+            }
+
+            // Springs
+            for (const s of springs) {
+                if (rectCollide(
+                    { x: sonic.x, y: sonic.y, w: sonic.w, h: sonic.h },
+                    { x: s.x, y: s.y, w: s.w, h: s.h }
+                ) && sonic.vy > 0) {
+                    sonic.vy = -16;
+                    sonic.onGround = false;
+                    playSpring();
+                }
+            }
+
+            // Enemies
+            for (const e of enemies) {
+                if (!e.alive) continue;
+                if (!rectCollide(
+                    { x: sonic.x, y: sonic.y, w: sonic.w, h: sonic.h },
+                    { x: e.x, y: e.y, w: e.w, h: e.h }
+                )) continue;
+
+                if (sonic.vy > 0 && sonic.y + sonic.h - e.y < 20) {
+                    e.alive = false;
+                    sonic.vy = JUMP / 1.5;
+                    score += 200;
+                    playStomp();
+                    updateDisplay();
+                } else if (sonic.invincible <= 0) {
+                    sonicHurt();
+                }
+            }
+
+            // Flag
+            if (flag && rectCollide(
+                { x: sonic.x, y: sonic.y, w: sonic.w, h: sonic.h },
+                { x: flag.x, y: flag.y, w: 20, h: 200 }
+            )) {
+                if (currentLevel < LEVELS.length - 1) {
+                    currentLevel++;
+                    sonic.x = 80; sonic.y = 300; sonic.vx = 0; sonic.vy = 0;
+                    sonic.onGround = false; sonic.facing = 1;
+                    sonic.invincible = 0; sonic.spinning = false; sonic.spinTimer = 0;
+                    sonic.frame = 0; sonic.frameTimer = 0;
+                    buildLevel();
+                    cameraX = 0;
+                    playWin();
+                    updateDisplay();
+                } else {
+                    gameWin = true;
+                    playWin();
+                    updateDisplay();
+                }
+            }
+        }
+
+        function sonicHurt() {
+            if (sonic.invincible > 0) return;
+            if (rings > 0) {
+                rings = 0;
+                sonic.invincible = 60;
+                playHurt();
+                // Scatter rings
+                for (let i = 0; i < 5; i++) {
+                    const rx = sonic.x + (i - 2) * 12;
+                    const ry = sonic.y - 20;
+                    ringList.push({ x: rx, y: ry, w: 16, h: 16, collected: false });
+                }
+            } else {
+                gameOver = true;
+                playGameOver();
+            }
+            updateDisplay();
+        }
+
+        function updateDisplay() {
+            ringSpan.textContent = rings;
+            scoreSpan.textContent = score;
+            levelSpan.textContent = (currentLevel + 1);
+        }
+
+        function update() {
+            if (gameOver || gameWin) return;
+
+            // Input
+            let moving = false;
+            if (keys['ArrowLeft'] || keys['a']) {
+                sonic.vx -= ACCEL;
+                sonic.facing = -1;
+                moving = true;
+            } else if (keys['ArrowRight'] || keys['d']) {
+                sonic.vx += ACCEL;
+                sonic.facing = 1;
+                moving = true;
+            } else {
+                sonic.vx *= FRICTION;
+                if (Math.abs(sonic.vx) < 0.1) sonic.vx = 0;
+            }
+            sonic.vx = Math.max(-MAX_SPEED, Math.min(MAX_SPEED, sonic.vx));
+
+            if ((keys[' '] || keys['ArrowUp'] || keys['w']) && sonic.onGround) {
+                sonic.vy = JUMP;
+                sonic.onGround = false;
+                sonic.spinning = true;
+                sonic.spinTimer = 20;
+                playJump();
+            }
+            if (sonic.spinTimer > 0) {
+                sonic.spinTimer--;
+            } else {
+                sonic.spinning = false;
+            }
+
+            // Gravity
+            sonic.vy += GRAVITY;
+            if (sonic.vy > 15) sonic.vy = 15;
+
+            sonic.x += sonic.vx;
+            sonic.y += sonic.vy;
+
+            if (sonic.x < 0) sonic.x = 0;
+            if (sonic.x > LEVELS[currentLevel].width - sonic.w) sonic.x = LEVELS[currentLevel].width - sonic.w;
+
+            handleCollisions();
+
+            if (sonic.y > canvas.height + 50) {
+                sonicHurt();
+                if (!gameOver) {
+                    sonic.x = 80; sonic.y = 300; sonic.vx = 0; sonic.vy = 0;
+                }
+            }
+
+            // Animation
+            if (sonic.onGround && Math.abs(sonic.vx) > 1) {
+                sonic.frameTimer++;
+                if (sonic.frameTimer > 4) {
+                    sonic.frame = (sonic.frame + 1) % 4;
+                    sonic.frameTimer = 0;
+                }
+            } else if (sonic.onGround) {
+                sonic.frame = 0;
+            } else {
+                sonic.frame = 5; // Jump
+            }
+
+            // Camera
+            cameraX = sonic.x - 380;
+            if (cameraX < 0) cameraX = 0;
+            if (cameraX > LEVELS[currentLevel].width - canvas.width) cameraX = LEVELS[currentLevel].width - canvas.width;
+
+            // Invincibility
+            if (sonic.invincible > 0) sonic.invincible--;
+
+            // Enemies
+            for (const e of enemies) {
+                if (!e.alive) continue;
+                const lookAhead = e.vx > 0 ? e.w + 2 : -2;
+                const checkX = e.x + e.w / 2 + lookAhead;
+                let blocked = false;
+                let hasGround = false;
+                for (const plat of platforms) {
+                    if ((plat.type === 'ground' || plat.type === 'stone') && plat.y === GROUND_Y) {
+                        if (checkX >= plat.x && checkX <= plat.x + plat.w) {
+                            hasGround = true;
+                            break;
+                        }
+                    }
+                }
+                if (!hasGround) blocked = true;
+                if (!blocked) {
+                    for (const plat of platforms) {
+                        if (plat.type === 'pipe' || plat.type === 'brick') {
+                            if (rectCollide(
+                                { x: e.x + e.vx, y: e.y, w: e.w, h: e.h },
+                                { x: plat.x, y: plat.y, w: plat.w, h: plat.h }
+                            )) { blocked = true; break; }
+                        }
+                    }
+                }
+                if (blocked) { e.vx *= -1; }
+                else { e.x += e.vx; }
+                if (e.range) {
+                    if (e.x < e.startX - e.range || e.x > e.startX + e.range) {
+                        e.vx *= -1;
+                        e.x = Math.max(e.startX - e.range, Math.min(e.startX + e.range, e.x));
+                    }
+                }
+                e.y = GROUND_Y - TILE;
+            }
+        }
+
+        function draw() {
+            const viewLeft = cameraX - TILE;
+            const viewRight = cameraX + canvas.width + TILE;
+            const lev = LEVELS[currentLevel];
+
+            // Sky
+            const skyGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            skyGrad.addColorStop(0, lev.skyTop);
+            skyGrad.addColorStop(0.4, lev.skyMid);
+            skyGrad.addColorStop(1, lev.skyBot);
+            ctx.fillStyle = skyGrad;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx.save();
+            ctx.translate(-cameraX, 0);
+
+            // Background hills
+            for (let i = 0; i < 8; i++) {
+                const hx = i * 700 + 50;
+                ctx.fillStyle = lev.hillColor;
+                ctx.beginPath();
+                ctx.arc(hx, GROUND_Y + TILE, 180, Math.PI, 0);
+                ctx.fill();
+                ctx.fillStyle = lev.hillColor2;
+                ctx.beginPath();
+                ctx.arc(hx + 100, GROUND_Y + TILE, 120, Math.PI, 0);
+                ctx.fill();
+            }
+
+            // Palms (only on outdoor levels)
+            if (currentLevel !== 2) {
+                for (let i = 0; i < 8; i++) {
+                    const px = i * 650 + 200;
+                    if (px > viewRight + 100 || px + 40 < viewLeft) continue;
+                    ctx.fillStyle = '#78350f';
+                    ctx.fillRect(px, GROUND_Y - 80, 8, 80);
+                    ctx.fillStyle = '#15803d';
+                    for (let j = 0; j < 5; j++) {
+                        const angle = j * 1.2 + 0.3;
+                        const lx = px + 4 + Math.cos(angle) * 30;
+                        const ly = GROUND_Y - 80 + Math.sin(angle) * 10;
+                        ctx.beginPath();
+                        ctx.ellipse(lx, ly, 20, 8, angle * 0.3, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                }
+            }
+
+            // Ground
+            for (const plat of platforms) {
+                if (plat.type !== 'ground') continue;
+                if (plat.x > viewRight || plat.x + plat.w < viewLeft) continue;
+                ctx.fillStyle = plat.y === GROUND_Y ? lev.groundColor : lev.groundDark;
+                ctx.fillRect(plat.x, plat.y, plat.w, plat.h);
+                if (plat.y === GROUND_Y) {
+                    ctx.strokeStyle = lev.groundLine;
+                    ctx.lineWidth = 1;
+                    ctx.strokeRect(plat.x, plat.y, plat.w, plat.h);
+                    ctx.fillStyle = lev.groundDark;
+                    for (let i = 0; i < 4; i++) {
+                        ctx.fillRect(plat.x + i * 8 + 2, plat.y - 3, 2, 3);
+                    }
+                }
+            }
+
+            // Checkered pattern on ground surface
+            for (const plat of platforms) {
+                if (plat.type !== 'ground' || plat.y !== GROUND_Y) continue;
+                if (plat.x > viewRight || plat.x + plat.w < viewLeft) continue;
+                for (let i = 0; i < plat.w; i += 16) {
+                    ctx.fillStyle = 'rgba(0,0,0,0.08)';
+                    ctx.fillRect(plat.x + i, plat.y, 8, 8);
+                    ctx.fillRect(plat.x + i + 8, plat.y + 8, 8, 8);
+                }
+            }
+
+            // Floating platforms
+            for (const plat of platforms) {
+                if (plat.type !== 'brick') continue;
+                if (plat.x > viewRight || plat.x + plat.w < viewLeft) continue;
+                ctx.fillStyle = lev.brickColor;
+                ctx.fillRect(plat.x, plat.y, plat.w, plat.h);
+                ctx.strokeStyle = lev.brickStroke;
+                ctx.lineWidth = 1;
+                ctx.strokeRect(plat.x, plat.y, plat.w, plat.h);
+            }
+
+            // Springs
+            for (const s of springs) {
+                if (s.x > viewRight || s.x + s.w < viewLeft) continue;
+                ctx.fillStyle = '#f59e0b';
+                ctx.fillRect(s.x, s.y, s.w, s.h);
+                ctx.fillStyle = '#d97706';
+                for (let i = 0; i < 4; i++) {
+                    ctx.fillRect(s.x + 2, s.y + i * 3 + 2, s.w - 4, 2);
+                }
+            }
+
+            // Rings
+            for (const r of ringList) {
+                if (r.collected) continue;
+                if (r.x > viewRight || r.x + r.w < viewLeft) continue;
+                const pulse = Math.sin(Date.now() / 150 + r.x) * 2;
+                ctx.fillStyle = '#fbbf24';
+                ctx.beginPath();
+                ctx.ellipse(r.x + 8, r.y + 8 + pulse, 6, 8, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#f59e0b';
+                ctx.beginPath();
+                ctx.ellipse(r.x + 7, r.y + 7 + pulse, 3, 4, 0, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Enemies
+            for (const e of enemies) {
+                if (!e.alive) continue;
+                if (e.x > viewRight || e.x + e.w < viewLeft) continue;
+                const f = Math.sin(Date.now() / 200) * 2;
+                // Body
+                ctx.fillStyle = '#dc2626';
+                ctx.beginPath();
+                ctx.ellipse(e.x + 14, e.y + 16 + f, 13, 11, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#b91c1c';
+                ctx.beginPath();
+                ctx.ellipse(e.x + 14, e.y + 16 + f, 8, 7, 0, 0, Math.PI * 2);
+                ctx.fill();
+                // Eyes
+                ctx.fillStyle = '#fff';
+                ctx.fillRect(e.x + 6, e.y + 10 + f, 6, 6);
+                ctx.fillRect(e.x + 16, e.y + 10 + f, 6, 6);
+                ctx.fillStyle = '#000';
+                const eyeDir = e.vx > 0 ? 2 : 0;
+                ctx.fillRect(e.x + 8 + eyeDir, e.y + 12 + f, 3, 3);
+                ctx.fillRect(e.x + 18 + eyeDir, e.y + 12 + f, 3, 3);
+                // Feet
+                ctx.fillStyle = '#991b1b';
+                const legOff = Math.sin(Date.now() / 100 + e.x) * 2;
+                ctx.fillRect(e.x + 4 + legOff, e.y + 24 + f, 6, 4);
+                ctx.fillRect(e.x + 18 - legOff, e.y + 24 + f, 6, 4);
+            }
+
+            // Flag
+            if (flag) {
+                ctx.fillStyle = '#888';
+                ctx.fillRect(flag.x + 8, flag.y, 4, GROUND_Y - flag.y + TILE);
+                ctx.fillStyle = '#fbbf24';
+                ctx.beginPath();
+                ctx.moveTo(flag.x + 8, flag.y);
+                ctx.lineTo(flag.x + 8 + 50, flag.y + 25);
+                ctx.lineTo(flag.x + 8, flag.y + 50);
+                ctx.fill();
+                ctx.fillStyle = '#3b82f6';
+                ctx.beginPath();
+                ctx.arc(flag.x + 10, flag.y, 7, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Sonic
+            if (!gameOver) {
+                const sx = sonic.x;
+                const sy = sonic.y;
+                const f = sonic.facing;
+                const blink = sonic.invincible > 0 && Math.floor(sonic.invincible / 4) % 2 === 0;
+
+                if (!blink) {
+                    ctx.fillStyle = '#3b82f6';
+                    // Body
+                    ctx.fillRect(sx + 4, sy + 8, 16, 16);
+                    // Head
+                    ctx.fillRect(sx + 4, sy + 2, 12, 8);
+                    // Spine
+                    ctx.fillStyle = '#1d4ed8';
+                    ctx.fillRect(sx + 6, sy + 2, 8, 6);
+                    // Eyes
+                    ctx.fillStyle = '#fff';
+                    ctx.fillRect(sx + (f > 0 ? 10 : 6), sy + 4, 6, 5);
+                    ctx.fillStyle = '#000';
+                    ctx.fillRect(sx + (f > 0 ? 12 : 8), sy + 5, 3, 3);
+                    // Mouth
+                    ctx.fillStyle = '#f0c8a0';
+                    ctx.fillRect(sx + (f > 0 ? 16 : 2), sy + 10, 4, 2);
+                    // Shoes
+                    ctx.fillStyle = '#dc2626';
+                    const legAnim = sonic.onGround ? Math.sin(sonic.frame * 1.5) * 2 : 0;
+                    ctx.fillRect(sx + 4 + legAnim, sy + 24, 6, 8);
+                    ctx.fillRect(sx + 14 - legAnim, sy + 24, 6, 8);
+                    // White glove
+                    ctx.fillStyle = '#fff';
+                    ctx.fillRect(sx + (f > 0 ? 18 : 2), sy + 14, 4, 4);
+                } else {
+                    // Blink when invincible
+                    ctx.fillStyle = 'rgba(59,130,246,0.3)';
+                    ctx.fillRect(sx, sy, sonic.w, sonic.h);
+                }
+            }
+
+            ctx.restore();
+
+            // HUD overlay
+            ctx.fillStyle = 'rgba(0,0,0,0.4)';
+            ctx.fillRect(0, 0, canvas.width, 4);
+
+            if (gameOver) {
+                ctx.fillStyle = 'rgba(0,0,0,0.7)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = '#ef4444';
+                ctx.font = 'bold 48px "Courier New", monospace';
+                ctx.textAlign = 'center';
+                ctx.fillText('GAME OVER', canvas.width / 2, canvas.height / 2 - 20);
+                ctx.fillStyle = '#aaa';
+                ctx.font = '18px "Courier New", monospace';
+                ctx.fillText('Tekan R untuk restart', canvas.width / 2, canvas.height / 2 + 30);
+            }
+
+            if (gameWin) {
+                ctx.fillStyle = 'rgba(0,0,0,0.7)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = '#fbbf24';
+                ctx.font = 'bold 48px "Courier New", monospace';
+                ctx.textAlign = 'center';
+                ctx.fillText('SEMUA LEVEL SELESAI!', canvas.width / 2, canvas.height / 2 - 30);
+                ctx.fillStyle = '#60a5fa';
+                ctx.font = '18px "Courier New", monospace';
+                ctx.fillText('Rings: ' + rings + ' | Skor: ' + score, canvas.width / 2, canvas.height / 2 + 10);
+                ctx.fillStyle = '#fff';
+                ctx.font = '16px "Courier New", monospace';
+                ctx.fillText('Tekan R untuk main lagi', canvas.width / 2, canvas.height / 2 + 40);
+            }
+        }
+
+        function gameLoop() {
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        function resetGame() {
+            score = 0; rings = 0; gameOver = false; gameWin = false; currentLevel = 0;
+            sonic.x = 80; sonic.y = 300; sonic.vx = 0; sonic.vy = 0;
+            sonic.onGround = false; sonic.facing = 1; sonic.frame = 0;
+            sonic.invincible = 0; sonic.spinning = false; sonic.spinTimer = 0;
+            cameraX = 0;
+            buildLevel();
+            updateDisplay();
+        }
+
+        document.addEventListener('keydown', (e) => {
+            const k = e.key;
+            keys[k] = true;
+            if (k === 'r' || k === 'R') { resetGame(); return; }
+        });
+        document.addEventListener('keyup', (e) => {
+            keys[e.key] = false;
+        });
+
+        function setupBtn(id, downFn, upFn) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            const p = (e) => { e.preventDefault(); downFn(); el.classList.add('pressed'); };
+            const r = (e) => { e.preventDefault(); el.classList.remove('pressed'); if (upFn) upFn(); };
+            el.addEventListener('touchstart', p, { passive: false });
+            el.addEventListener('touchend', r, { passive: false });
+            el.addEventListener('touchcancel', r, { passive: false });
+            el.addEventListener('mousedown', p);
+            el.addEventListener('mouseup', r);
+            el.addEventListener('mouseleave', r);
+        }
+        setupBtn('btnLeft', () => { keys['ArrowLeft'] = true; }, () => { keys['ArrowLeft'] = false; });
+        setupBtn('btnRight', () => { keys['ArrowRight'] = true; }, () => { keys['ArrowRight'] = false; });
+        setupBtn('btnJump', () => { keys[' '] = true; }, () => { keys[' '] = false; });
+
+        buildLevel();
+        updateDisplay();
+        gameLoop();
+    </script>
+</body>
+</html>

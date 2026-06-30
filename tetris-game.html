@@ -277,13 +277,6 @@
             lock();
         }
 
-        function ghostY() {
-            if (!currentPiece) return 0;
-            let gy = 0;
-            while (!collide(currentPiece, 0, gy + 1)) gy++;
-            return gy;
-        }
-
         function update() {
             if (gameOver) return;
             dropTimer++;
@@ -321,26 +314,8 @@
                 }
             }
 
-            // Ghost
+            // Active piece
             if (currentPiece && !gameOver) {
-                const gy = ghostY();
-                for (let r = 0; r < currentPiece.shape.length; r++) {
-                    for (let c = 0; c < currentPiece.shape[0].length; c++) {
-                        if (!currentPiece.shape[r][c]) continue;
-                        const x = BOARD_X + (currentPiece.x + c) * B;
-                        const y = BOARD_Y + (gy + r) * B;
-                        ctx.strokeStyle = 'rgba(255,255,255,0.1)';
-                        ctx.lineWidth = 1;
-                        ctx.strokeRect(x + 1.5, y + 1.5, B - 3, B - 3);
-                        for (let d = 0; d < B; d += 4) {
-                            ctx.fillStyle = 'rgba(255,255,255,0.03)';
-                            ctx.fillRect(x + d, y, 2, 1);
-                            ctx.fillRect(x, y + d, 1, 2);
-                        }
-                    }
-                }
-
-                // Active piece
                 for (let r = 0; r < currentPiece.shape.length; r++) {
                     for (let c = 0; c < currentPiece.shape[0].length; c++) {
                         if (!currentPiece.shape[r][c]) continue;
@@ -452,21 +427,19 @@
         function drawBlock(x, y, d) {
             ctx.fillStyle = d.color;
             ctx.fillRect(x, y, B, B);
-            ctx.fillStyle = d.light;
-            ctx.fillRect(x, y, B, 2);
-            ctx.fillRect(x, y, 2, B);
             ctx.fillStyle = d.dark;
-            ctx.fillRect(x + B - 2, y, 2, B);
-            ctx.fillRect(x, y + B - 2, B, 2);
+            ctx.fillRect(x, y, B, 1);
+            ctx.fillRect(x, y, 1, B);
+            ctx.fillRect(x + B - 1, y, 1, B);
+            ctx.fillRect(x, y + B - 1, B, 1);
         }
 
         function drawSmall(x, y, d, s) {
             ctx.fillStyle = d.color;
             ctx.fillRect(x, y, s, s);
-            ctx.fillStyle = d.light;
+            ctx.fillStyle = d.dark;
             ctx.fillRect(x, y, s, 1);
             ctx.fillRect(x, y, 1, s);
-            ctx.fillStyle = d.dark;
             ctx.fillRect(x + s - 1, y, 1, s);
             ctx.fillRect(x, y + s - 1, s, 1);
         }

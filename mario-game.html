@@ -19,7 +19,7 @@
         .game-wrapper {
             position: relative;
             width: 100%;
-            max-width: 800px;
+            max-width: 960px;
             text-align: center;
         }
         .game-header {
@@ -41,7 +41,7 @@
             display: block;
             width: 100%;
             height: auto;
-            aspect-ratio: 800 / 500;
+            aspect-ratio: 960 / 600;
             border: 2px solid #333;
             image-rendering: pixelated;
             image-rendering: crisp-edges;
@@ -169,7 +169,7 @@
         </div>
 
         <div style="position:relative;display:inline-block;width:100%;">
-            <canvas id="gameCanvas" width="800" height="500"></canvas>
+            <canvas id="gameCanvas" width="960" height="600"></canvas>
 
             <!-- Touch Controls Overlay -->
             <div class="touch-controls" id="touchControls">
@@ -196,9 +196,9 @@
         const livesSpan = document.getElementById('livesDisplay');
 
         // Game constants
-        const GRAVITY = 0.6;
-        const JUMP_FORCE = -12;
-        const MOVE_SPEED = 4;
+        const GRAVITY = 0.7;
+        const JUMP_FORCE = -13;
+        const MOVE_SPEED = 5;
         const TILE = 32;
 
         // Game state
@@ -328,6 +328,9 @@
             for (let x = 0; x < LEVEL_WIDTH; x += TILE) {
                 platforms.push({ x, y: GROUND_Y, w: TILE, h: TILE, type: 'ground' });
                 platforms.push({ x, y: GROUND_Y + TILE, w: TILE, h: TILE, type: 'ground' });
+                platforms.push({ x, y: GROUND_Y + TILE * 2, w: TILE, h: TILE, type: 'ground' });
+                platforms.push({ x, y: GROUND_Y + TILE * 3, w: TILE, h: TILE, type: 'ground' });
+                platforms.push({ x, y: GROUND_Y + TILE * 4, w: TILE, h: TILE, type: 'ground' });
             }
 
             const gaps = [
@@ -337,7 +340,7 @@
             ];
             platforms = platforms.filter(p => {
                 for (const g of gaps) {
-                    if (p.x >= g.start && p.x < g.end && p.y === GROUND_Y) return false;
+                    if (p.x >= g.start && p.x < g.end && (p.y === GROUND_Y || p.y === GROUND_Y + TILE)) return false;
                 }
                 return true;
             });
@@ -440,6 +443,9 @@
             for (let x = 0; x < LEVEL_WIDTH; x += TILE) {
                 platforms.push({ x, y: GROUND_Y, w: TILE, h: TILE, type: 'stone' });
                 platforms.push({ x, y: GROUND_Y + TILE, w: TILE, h: TILE, type: 'stone' });
+                platforms.push({ x, y: GROUND_Y + TILE * 2, w: TILE, h: TILE, type: 'stone' });
+                platforms.push({ x, y: GROUND_Y + TILE * 3, w: TILE, h: TILE, type: 'stone' });
+                platforms.push({ x, y: GROUND_Y + TILE * 4, w: TILE, h: TILE, type: 'stone' });
             }
 
             const gaps = [
@@ -451,7 +457,7 @@
             ];
             platforms = platforms.filter(p => {
                 for (const g of gaps) {
-                    if (p.x >= g.start && p.x < g.end && p.y === GROUND_Y) return false;
+                    if (p.x >= g.start && p.x < g.end && (p.y === GROUND_Y || p.y === GROUND_Y + TILE)) return false;
                 }
                 return true;
             });
@@ -588,7 +594,11 @@
         function handleCollisions() {
             mario.onGround = false;
 
+            const viewLeft = cameraX - TILE;
+            const viewRight = cameraX + canvas.width + TILE;
+
             for (const plat of platforms) {
+                if (plat.x > viewRight || plat.x + plat.w < viewLeft) continue;
                 if (!rectCollide(
                     { x: mario.x, y: mario.y, w: mario.width, h: mario.height },
                     { x: plat.x, y: plat.y, w: plat.w, h: plat.h }
@@ -761,9 +771,9 @@
                 mario.frame = 0;
             }
 
-            cameraX = mario.x - 300;
+            cameraX = mario.x - 360;
             if (cameraX < 0) cameraX = 0;
-            if (cameraX > LEVEL_WIDTH - 800) cameraX = LEVEL_WIDTH - 800;
+            if (cameraX > LEVEL_WIDTH - 960) cameraX = LEVEL_WIDTH - 960;
 
             goombaTimer++;
             if (goombaTimer > 15) {
@@ -773,10 +783,53 @@
 
             for (const e of enemies) {
                 if (!e.alive) continue;
-                e.x += e.vx;
-                if (e.x < e.startX - e.range || e.x > e.startX + e.range) {
-                    e.vx *= -1;
+
+                // Look ahead for gaps and pipes
+                const lookAhead = e.vx > 0 ? e.w + 2 : -2;
+                const checkX = e.x + e.w / 2 + lookAhead;
+                let blocked = false;
+
+                // Check gap ahead
+                let hasGround = false;
+                for (const plat of platforms) {
+                    if ((plat.type === 'ground' || plat.type === 'stone') && plat.y === GROUND_Y) {
+                        if (checkX >= plat.x && checkX <= plat.x + plat.w) {
+                            hasGround = true;
+                            break;
+                        }
+                    }
                 }
+                if (!hasGround) blocked = true;
+
+                // Check pipe collision ahead
+                if (!blocked) {
+                    for (const plat of platforms) {
+                        if (plat.type === 'pipe') {
+                            if (rectCollide(
+                                { x: e.x + e.vx, y: e.y, w: e.w, h: e.h },
+                                { x: plat.x, y: plat.y, w: plat.w, h: plat.h }
+                            )) {
+                                blocked = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                if (blocked) {
+                    e.vx *= -1;
+                } else {
+                    e.x += e.vx;
+                }
+
+                if (e.range) {
+                    if (e.x < e.startX - e.range || e.x > e.startX + e.range) {
+                        e.vx *= -1;
+                        e.x = Math.max(e.startX - e.range, Math.min(e.startX + e.range, e.x));
+                    }
+                }
+
+                e.y = GROUND_Y - TILE;
             }
         }
 
@@ -855,7 +908,7 @@
         function draw() {
             const isUnderground = currentLevel === 2;
             ctx.fillStyle = isUnderground ? '#0f0f23' : COLORS.sky;
-            ctx.fillRect(0, 0, 800, 500);
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
 
             ctx.save();
             ctx.translate(-cameraX, 0);
@@ -863,7 +916,7 @@
             if (!isUnderground) {
                 ctx.fillStyle = COLORS.hill;
                 for (let i = 0; i < 5; i++) {
-                    const hx = i * 800 + 100;
+                    const hx = i * 960 + 100;
                     const hw = 200;
                     ctx.beginPath();
                     ctx.arc(hx, GROUND_Y + TILE, hw, Math.PI, 0);
@@ -872,7 +925,7 @@
 
                 ctx.fillStyle = COLORS.cloud;
                 for (let i = 0; i < 8; i++) {
-                    const cx = i * 500 + 50;
+                    const cx = i * 600 + 50;
                     const cy = 40 + (i % 3) * 30;
                     ctx.fillRect(cx, cy, 60, 20);
                     ctx.fillRect(cx + 10, cy - 10, 40, 10);
@@ -898,8 +951,12 @@
                 }
             }
 
+            const viewLeft = cameraX - TILE;
+            const viewRight = cameraX + canvas.width + TILE;
+
             for (const plat of platforms) {
                 if (plat.type === 'ground' || plat.type === 'stone') {
+                    if (plat.x > viewRight || plat.x + plat.w < viewLeft) continue;
                     if (isUnderground) {
                         ctx.fillStyle = plat.y === GROUND_Y ? '#555' : '#444';
                     } else {
@@ -910,12 +967,29 @@
                         ctx.strokeStyle = isUnderground ? '#666' : COLORS.groundDark;
                         ctx.lineWidth = 1;
                         ctx.strokeRect(plat.x, plat.y, plat.w, plat.h);
+                        ctx.fillStyle = '#16a34a';
+                        for (let i = 0; i < 3; i++) {
+                            const gx = plat.x + 4 + i * 10;
+                            ctx.fillRect(gx, plat.y - 3, 2, 3);
+                            ctx.fillRect(gx + 1, plat.y - 5, 1, 2);
+                        }
+                    } else {
+                        const seed = plat.x * 7 + plat.y * 13;
+                        for (let i = 0; i < 6; i++) {
+                            const dx = plat.x + ((seed + i * 11) % (plat.w - 4)) + 2;
+                            const dy = plat.y + ((seed + i * 17) % (plat.h - 4)) + 2;
+                            ctx.fillStyle = isUnderground ? '#555' : '#78350f';
+                            ctx.fillRect(dx, dy, 2, 2);
+                            ctx.fillStyle = isUnderground ? '#4a4a4a' : '#92400e';
+                            ctx.fillRect(dx + 1, dy + 1, 1, 1);
+                        }
                     }
                 }
             }
 
             for (const plat of platforms) {
                 if (plat.type === 'brick') {
+                    if (plat.x > viewRight || plat.x + plat.w < viewLeft) continue;
                     ctx.fillStyle = COLORS.brick;
                     ctx.fillRect(plat.x, plat.y, plat.w, plat.h);
                     ctx.strokeStyle = COLORS.brickLine;
@@ -947,6 +1021,7 @@
             }
 
             for (const p of pipes) {
+                if (p.x > viewRight || p.x + TILE * 2 < viewLeft) continue;
                 ctx.fillStyle = COLORS.pipe;
                 ctx.fillRect(p.x + 2, p.y + TILE, TILE * 2 - 4, (p.h - 1) * TILE);
                 ctx.fillStyle = COLORS.pipeDark;
@@ -959,6 +1034,7 @@
 
             for (const c of coinList) {
                 if (c.collected) continue;
+                if (c.x > viewRight || c.x + c.w < viewLeft) continue;
                 const pulse = Math.sin(Date.now() / 200 + c.x) * 2;
                 ctx.fillStyle = COLORS.coin;
                 ctx.beginPath();
@@ -998,29 +1074,29 @@
 
             if (gameOver) {
                 ctx.fillStyle = 'rgba(0,0,0,0.7)';
-                ctx.fillRect(0, 0, 800, 500);
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
                 ctx.fillStyle = COLORS.text;
                 ctx.font = '48px "Courier New", monospace';
                 ctx.textAlign = 'center';
-                ctx.fillText('GAME OVER', 400, 240);
+                ctx.fillText('GAME OVER', canvas.width / 2, 240);
                 ctx.font = '18px "Courier New", monospace';
-                ctx.fillText('Tekan R untuk restart', 400, 290);
+                ctx.fillText('Tekan R untuk restart', canvas.width / 2, 290);
             }
 
             if (gameWin) {
                 ctx.fillStyle = 'rgba(0,0,0,0.7)';
-                ctx.fillRect(0, 0, 800, 500);
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
                 ctx.fillStyle = '#fbbf24';
                 ctx.font = '48px "Courier New", monospace';
                 ctx.textAlign = 'center';
-                ctx.fillText('SELAMAT!', 400, 220);
+                ctx.fillText('SELAMAT!', canvas.width / 2, 220);
                 ctx.fillStyle = COLORS.text;
                 ctx.font = '24px "Courier New", monospace';
-                ctx.fillText('Kamu menyelesaikan level!', 400, 270);
+                ctx.fillText('Kamu menyelesaikan level!', canvas.width / 2, 270);
                 ctx.font = '18px "Courier New", monospace';
-                ctx.fillText('Skor: ' + score + ' | Koin: ' + coins, 400, 310);
+                ctx.fillText('Skor: ' + score + ' | Koin: ' + coins, canvas.width / 2, 310);
                 ctx.font = '16px "Courier New", monospace';
-                ctx.fillText('Tekan R untuk main lagi', 400, 350);
+                ctx.fillText('Tekan R untuk main lagi', canvas.width / 2, 350);
             }
         }
 

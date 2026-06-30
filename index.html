@@ -35,7 +35,7 @@
             <div class="billboard-item" style="background-image:url('img/tetris.webp')">
                 <span>Tetris Pixel</span>
             </div>
-            <div class="billboard-item" style="background-image:url('https://placehold.co/300x200/1e40af/fbbf24?text=SONIC')">
+            <div class="billboard-item" style="background-image:url('https://m.gjcdn.net/fireside-post-image/800/6885345-ll-szknyn9v-v4.webp')">
                 <span>Sonic Pixel</span>
             </div>
             <div class="billboard-item" style="background-image:url('img/supermario.jpg')">
@@ -47,7 +47,7 @@
             <div class="billboard-item" style="background-image:url('img/tetris.webp')">
                 <span>Tetris Pixel</span>
             </div>
-            <div class="billboard-item" style="background-image:url('https://placehold.co/300x200/1e40af/fbbf24?text=SONIC')">
+            <div class="billboard-item" style="background-image:url('https://m.gjcdn.net/fireside-post-image/800/6885345-ll-szknyn9v-v4.webp')">
                 <span>Sonic Pixel</span>
             </div>
         </div>
@@ -166,6 +166,32 @@
 
     <!-- Toast -->
     <div id="toast" class="toast hidden"></div>
+
+    <!-- Ad Overlay -->
+    <div id="adOverlay" class="ad-overlay hidden">
+        <div class="ad-container">
+            <div class="ad-video-wrap">
+                <img id="adPoster" class="ad-poster" src="" alt="Ad">
+                <div class="ad-branding" id="adBranding">
+                    <div class="ad-brand-logo" id="adBrandLogo"></div>
+                    <div class="ad-brand-name" id="adBrandName"></div>
+                    <div class="ad-brand-tagline" id="adBrandTagline"></div>
+                </div>
+                <button class="ad-play-btn" id="adPlayBtn"><i class="fas fa-play"></i> Putar Iklan</button>
+                <iframe id="adVideo" src="" allow="autoplay; encrypted-media; fullscreen" allowfullscreen></iframe>
+                <div class="ad-loading" id="adLoading">
+                    <div class="ad-spinner"></div>
+                </div>
+            </div>
+            <div class="ad-footer">
+                <span class="ad-label"><i class="fas fa-ad"></i> IKLAN</span>
+                <div class="ad-progress">
+                    <div class="ad-progress-bar" id="adProgressBar"></div>
+                </div>
+                <button id="adSkipBtn" class="ad-skip-btn" disabled>Skip <span id="adTimer">5</span>d</button>
+            </div>
+        </div>
+    </div>
 
     <script src="js/script.js"></script>
 </body>

@@ -2,7 +2,7 @@ const games = [
     { id: 1, title: "Super Mario Pixel", genre: "platformer", genreLabel: "Platformer", size: "Browser", plays: "99.9k", image: "img/supermario.jpg", description: "Game platformer klasik Super Mario versi pixel. Lompat, kumpulkan koin, dan kalahkan musuh.", playable: true, url: "mario-game.html" },
     { id: 2, title: "Pacman Pixel", genre: "retro", genreLabel: "Retro", size: "Browser", plays: "88.5k", image: "https://img.itch.zone/aW1nLzE5MjA4MTQ5LnBuZw==/original/ZX%2FlHq.png", description: "Game klasik Pacman versi pixel. Makan semua titik dan hindari hantu.", playable: true, url: "pacman-game.html" },
     { id: 3, title: "Tetris Pixel", genre: "puzzle", genreLabel: "Puzzle", size: "Browser", plays: "76.2k", image: "img/tetris.webp", description: "Game puzzle klasik Tetris. Susun blok untuk menghilangkan baris. Semakin tinggi skor, semakin cepat!", playable: true, url: "tetris-game.html" },
-    { id: 4, title: "Sonic Pixel", genre: "platformer", genreLabel: "Platformer", size: "Browser", plays: "65.1k", image: "https://placehold.co/300x200/1e40af/fbbf24?text=SONIC", description: "Game platformer Sonic versi pixel. Kumpulkan ring, kalahkan musuh, dan capai kecepatan maksimal!", playable: true, url: "sonic-game.html" }
+    { id: 4, title: "Sonic Pixel", genre: "platformer", genreLabel: "Platformer", size: "Browser", plays: "65.1k", image: "https://m.gjcdn.net/fireside-post-image/800/6885345-ll-szknyn9v-v4.webp", description: "Game platformer Sonic versi pixel. Kumpulkan ring, kalahkan musuh, dan capai kecepatan maksimal!", playable: true, url: "sonic-game.html" }
 ];
 
 const gamesGrid = document.getElementById('gamesGrid');
@@ -21,7 +21,16 @@ const gamePlayTitle = document.getElementById('gamePlayTitle');
 const closeBtn = document.querySelector('.close-btn');
 const closeGameBtns = document.querySelectorAll('.close-game-btn');
 const toast = document.getElementById('toast');
+const adOverlay = document.getElementById('adOverlay');
+const adVideo = document.getElementById('adVideo');
+const adSkipBtn = document.getElementById('adSkipBtn');
+const adTimer = document.getElementById('adTimer');
+const adLoading = document.getElementById('adLoading');
 let currentGame = null;
+let adPendingCallback = null;
+let adCountdown = 5;
+let adInterval = null;
+let adSkippable = false;
 
 function renderGames(filteredGames) {
     gamesGrid.innerHTML = '';
@@ -84,13 +93,95 @@ function openModal(game) {
 
 function openGamePlay(game) {
     closeModal();
-    gamePlayTitle.textContent = game.title;
-    gameIframe.src = game.url;
-    gamePlayModal.classList.add('active');
-    document.body.style.overflow = 'hidden';
-    gameIframe.onload = () => gameIframe.focus();
-    setTimeout(() => gameIframe.focus(), 300);
+    showAd(() => {
+        gamePlayTitle.textContent = game.title;
+        gameIframe.src = game.url;
+        gamePlayModal.classList.add('active');
+        document.body.style.overflow = 'hidden';
+        gameIframe.onload = () => gameIframe.focus();
+        setTimeout(() => gameIframe.focus(), 300);
+    });
 }
+
+const AD_DATA = {
+    videoId: 'owGykVbfgUE',
+    poster: 'https://img.youtube.com/vi/owGykVbfgUE/hqdefault.jpg',
+    logo: '🛁',
+    brand: 'Old Spice',
+    tagline: 'Bau badan? Old Spice jawabannya!'
+};
+
+function showAd(callback) {
+    adPendingCallback = callback;
+    adCountdown = 5;
+    adSkippable = false;
+    adTimer.textContent = '5';
+    adSkipBtn.disabled = true;
+    adSkipBtn.classList.remove('active');
+    document.getElementById('adProgressBar').style.width = '0%';
+    document.getElementById('adPlayBtn').classList.remove('visible');
+
+    document.getElementById('adPoster').src = AD_DATA.poster;
+    document.getElementById('adBrandLogo').textContent = AD_DATA.logo;
+    document.getElementById('adBrandName').textContent = AD_DATA.brand;
+    document.getElementById('adBrandTagline').textContent = AD_DATA.tagline;
+
+    adVideo.src = 'https://www.youtube.com/embed/' + AD_DATA.videoId + '?autoplay=1&mute=1&controls=0&modestbranding=1&rel=0&playsinline=1';
+
+    adLoading.classList.remove('hidden');
+    setTimeout(() => adLoading.classList.add('hidden'), 2000);
+
+    adOverlay.classList.remove('hidden');
+
+    clearInterval(adInterval);
+    adInterval = setInterval(() => {
+        adCountdown--;
+        var pct = ((5 - adCountdown) / 5) * 100;
+        document.getElementById('adProgressBar').style.width = Math.min(pct, 100) + '%';
+        if (adCountdown > 0) {
+            adTimer.textContent = adCountdown;
+        } else {
+            clearInterval(adInterval);
+            adSkippable = true;
+            adSkipBtn.disabled = false;
+            adSkipBtn.classList.add('active');
+            adTimer.textContent = '';
+            document.getElementById('adProgressBar').style.width = '100%';
+            adLoading.classList.add('hidden');
+        }
+    }, 1000);
+
+    setTimeout(function() {
+        var pb = document.getElementById('adPlayBtn');
+        if (!adSkippable) pb.classList.add('visible');
+    }, 1500);
+}
+
+function closeAd() {
+    clearInterval(adInterval);
+    adOverlay.classList.add('hidden');
+    adVideo.src = '';
+    if (adPendingCallback) {
+        var cb = adPendingCallback;
+        adPendingCallback = null;
+        cb();
+    }
+}
+
+adSkipBtn.addEventListener('click', function() {
+    if (adSkippable) closeAd();
+});
+adSkipBtn.addEventListener('touchend', function(e) {
+    if (adSkippable) { e.preventDefault(); closeAd(); }
+});
+
+document.getElementById('adPlayBtn').addEventListener('click', function() {
+    this.classList.remove('visible');
+});
+document.getElementById('adPlayBtn').addEventListener('touchend', function(e) {
+    this.classList.remove('visible');
+    e.preventDefault();
+});
 
 gamePlayModal.addEventListener('click', (e) => {
     if (e.target === gamePlayModal || e.target === gamePlayModal.querySelector('.modal-game-content')) {

@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300" viewBox="0 0 400 300">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0a0a2e"/>
+      <stop offset="100%" style="stop-color:#991b1b"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="300" fill="url(#bg)"/>
+  <g transform="translate(200,140)">
+    <polygon points="0,-40 -20,30 -10,20 10,20 20,30" fill="#3b82f6"/>
+    <polygon points="0,-30 -10,20 10,20" fill="#60a5fa"/>
+    <rect x="-4" y="-45" width="8" height="10" fill="#fbbf24"/>
+    <rect x="-24" y="18" width="8" height="14" fill="#ef4444"/>
+    <rect x="16" y="18" width="8" height="14" fill="#ef4444"/>
+    <rect x="-3" y="30" width="6" height="10" fill="#f97316" opacity="0.8"/>
+  </g>
+  <g opacity="0.7">
+    <polygon points="100,50 85,80 95,75 105,75 115,80" fill="#ef4444"/>
+    <polygon points="300,70 285,100 295,95 305,95 315,100" fill="#a855f7"/>
+    <polygon points="150,100 130,100 130,130 170,130 170,100" fill="#6b7280"/>
+    <polygon points="320,40 305,70 315,65 325,65 335,70" fill="#22d3ee"/>
+  </g>
+  <g>
+    <circle cx="50" cy="30" r="1" fill="#fff" opacity="0.6"/>
+    <circle cx="350" cy="50" r="1.5" fill="#fff" opacity="0.5"/>
+    <circle cx="80" cy="250" r="1" fill="#fff" opacity="0.4"/>
+    <circle cx="320" cy="220" r="1" fill="#fff" opacity="0.6"/>
+    <circle cx="200" cy="20" r="1.5" fill="#fff" opacity="0.5"/>
+    <circle cx="380" cy="150" r="1" fill="#fff" opacity="0.3"/>
+  </g>
+  <text x="200" y="250" text-anchor="middle" font-family="Courier New,monospace" font-size="22" font-weight="bold" fill="#fbbf24">AIR FORCE</text>
+  <text x="200" y="275" text-anchor="middle" font-family="Courier New,monospace" font-size="14" fill="#f97316">PIXEL</text>
+</svg>

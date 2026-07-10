@@ -92,6 +92,17 @@
             background: rgba(239,68,68,0.5);
             border-color: rgba(239,68,68,0.9);
         }
+        .laser-btn {
+            width: 60px; height: 60px;
+            background: rgba(251,191,36,0.15);
+            border-color: rgba(251,191,36,0.5);
+            color: #fbbf24;
+            font-size: 10px; font-weight: bold;
+        }
+        .laser-btn:active, .laser-btn.pressed {
+            background: rgba(251,191,36,0.4);
+            border-color: rgba(251,191,36,0.9);
+        }
         @media (max-width: 400px) {
             .ctrl-btn { width: 50px; height: 50px; font-size: 18px; }
             .fire-btn { width: 60px; height: 60px; font-size: 12px; }
@@ -117,6 +128,7 @@
                         <button class="ctrl-btn" id="btnRight" aria-label="Kanan">&#x25B6;</button>
                     </div>
                     <div class="fire-btn-area">
+                        <button class="ctrl-btn laser-btn" id="btnLaser" aria-label="Laser">LASER</button>
                         <button class="ctrl-btn fire-btn" id="btnFire" aria-label="Fire">FIRE</button>
                     </div>
                 </div>
@@ -124,7 +136,7 @@
         </div>
 
         <div class="controls-info">
-            <kbd>&#x25C0;&#x25B6;</kbd> Gerak &nbsp; <kbd>SPACE</kbd> Tembak &nbsp; <kbd>P</kbd> Jeda &nbsp; <kbd>R</kbd> Ulang
+            <kbd>&#x25C0;&#x25B6;</kbd> Gerak &nbsp; <kbd>SPACE</kbd> Tembak &nbsp; <kbd>L</kbd> Laser &nbsp; <kbd>P</kbd> Jeda &nbsp; <kbd>R</kbd> Ulang
         </div>
         <a href="index.html" class="back-link">&laquo; Kembali ke Daftar Game</a>
     </div>
@@ -155,6 +167,12 @@
         let difficulty = 1;
         let screenShake = 0;
         let frameCount = 0;
+        let laserActive = false;
+        let laserEnergy = 100;
+        let laserMaxEnergy = 100;
+        let laserDrain = 0.8;
+        let laserRecharge = 0.3;
+        let laserHitTargets = new Set();
 
         let player = { x: W / 2, y: H - 70, w: 32, h: 36, speed: 5, shootCooldown: 0, invincible: 0, powerTimer: 0, powerType: null };
         let bullets = [];
@@ -220,6 +238,12 @@
                         osc.frequency.setValueAtTime(1047, ac.currentTime + 0.3);
                         gain.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.5);
                         osc.start(); osc.stop(ac.currentTime + 0.5); break;
+                    case 'laser':
+                        osc.type = 'sawtooth'; osc.frequency.setValueAtTime(1200, ac.currentTime);
+                        osc.frequency.linearRampToValueAtTime(800, ac.currentTime + 0.05);
+                        gain.gain.setValueAtTime(0.08, ac.currentTime);
+                        gain.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.06);
+                        osc.start(); osc.stop(ac.currentTime + 0.06); break;
                 }
             } catch(e) {}
         }
@@ -587,6 +611,34 @@
                 if (p.powerTimer <= 0) p.powerType = null;
             }
 
+            laserActive = (keys['l'] || keys['L']) && laserEnergy > 0 && !gameOver;
+            if (laserActive) {
+                laserEnergy = Math.max(0, laserEnergy - laserDrain);
+                if (frameCount % 3 === 0) sfx('laser');
+                laserHitTargets.clear();
+                for (let j = enemies.length - 1; j >= 0; j--) {
+                    const e = enemies[j];
+                    if (Math.abs(e.x - p.x) < (e.w / 2 + 12) && e.y < p.y) {
+                        if (!laserHitTargets.has(j)) {
+                            laserHitTargets.add(j);
+                            e.hp -= 0.15;
+                            if (e.hp <= 0) {
+                                const pts = e.type === 'boss' ? 500 : e.type === 'tank' ? 200 : e.type === 'fast' ? 150 : 100;
+                                score += pts;
+                                addExplosion(e.x, e.y, e.w / 2);
+                                sfx('explosion');
+                                spawnPowerup(e.x, e.y);
+                                enemies.splice(j, 1);
+                                enemiesRemaining--;
+                                updateHUD();
+                            }
+                        }
+                    }
+                }
+            } else {
+                laserEnergy = Math.min(laserMaxEnergy, laserEnergy + laserRecharge);
+            }
+
             if (keys['ArrowLeft'] || keys['a'] || keys['A']) p.x -= p.speed;
             if (keys['ArrowRight'] || keys['d'] || keys['D']) p.x += p.speed;
             if (keys['ArrowUp'] || keys['w'] || keys['W']) p.y -= p.speed;
@@ -819,7 +871,24 @@
             });
             ctx.globalAlpha = 1;
 
-            if (!gameOver) drawPlayer();
+            if (!gameOver) {
+                drawPlayer();
+                if (laserActive) {
+                    const beamW = 10;
+                    const grad = ctx.createLinearGradient(player.x, player.y - player.h / 2, player.x, 0);
+                    grad.addColorStop(0, 'rgba(239,68,68,0.9)');
+                    grad.addColorStop(0.3, 'rgba(251,191,36,0.7)');
+                    grad.addColorStop(1, 'rgba(239,68,68,0.1)');
+                    ctx.fillStyle = grad;
+                    ctx.fillRect(player.x - beamW / 2, 0, beamW, player.y - player.h / 2);
+                    ctx.fillStyle = 'rgba(239,68,68,0.3)';
+                    ctx.fillRect(player.x - beamW, 0, beamW * 2, player.y - player.h / 2);
+                    ctx.fillStyle = 'rgba(255,255,255,0.8)';
+                    ctx.fillRect(player.x - 1.5, 0, 3, player.y - player.h / 2);
+                    ctx.fillStyle = 'rgba(251,191,36,0.4)';
+                    ctx.fillRect(player.x - beamW * 1.5, 0, beamW * 3, player.y - player.h / 2);
+                }
+            }
 
             if (gameOver) {
                 ctx.fillStyle = 'rgba(0,0,0,0.7)';
@@ -845,6 +914,16 @@
                 ctx.fillText('JEDA', W / 2, H / 2);
             }
 
+            const barW = 100, barH = 6, barX = W / 2 - barW / 2, barY = 10;
+            ctx.fillStyle = '#1c1917';
+            ctx.fillRect(barX - 1, barY - 1, barW + 2, barH + 2);
+            ctx.fillStyle = laserEnergy > 30 ? '#ef4444' : '#fbbf24';
+            ctx.fillRect(barX, barY, barW * (laserEnergy / laserMaxEnergy), barH);
+            ctx.fillStyle = '#fff';
+            ctx.font = '8px Courier New';
+            ctx.textAlign = 'center';
+            ctx.fillText('LASER', W / 2, barY + barH + 10);
+
             ctx.restore();
         }
 
@@ -862,6 +941,7 @@
             player.x = W / 2; player.y = H - 70;
             player.invincible = 60; player.powerType = null; player.powerTimer = 0;
             frameCount = 0; screenShake = 0;
+            laserEnergy = 100; laserActive = false;
             startWave();
             updateHUD();
         }
@@ -891,6 +971,9 @@
         setupBtn(btnLeft, 'ArrowLeft', 'ArrowRight');
         setupBtn(btnRight, 'ArrowRight', 'ArrowLeft');
         setupBtn(btnFire, ' ', null);
+
+        const btnLaser = document.getElementById('btnLaser');
+        setupBtn(btnLaser, 'l', null);
 
         canvas.addEventListener('touchstart', (e) => {
             e.preventDefault();

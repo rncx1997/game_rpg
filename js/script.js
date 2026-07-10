@@ -325,13 +325,6 @@ if (counters.length > 0) {
     });
 })();
 
-// Contact form
-document.getElementById('contactForm').addEventListener('submit', (e) => {
-    e.preventDefault();
-    showToast('Pesan berhasil dikirim!');
-    e.target.reset();
-});
-
 // Init
 filterGames();
 

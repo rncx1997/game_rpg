@@ -266,6 +266,30 @@
         </div>
     </div>
 
+    <!-- Comment Sidebar -->
+    <div class="comment-sidebar" id="commentSidebar">
+        <div class="comment-sidebar-header">
+            <h3><i class="fas fa-comments"></i> Komentar</h3>
+            <button class="comment-toggle-btn" id="commentToggle" onclick="toggleCommentSidebar()"><i class="fas fa-chevron-left"></i></button>
+        </div>
+        <div class="comment-sidebar-body" id="commentSidebarBody">
+            <div class="comment-login-hint" id="commentLoginHint">
+                <i class="fas fa-lock"></i>
+                <p>Masuk untuk komentar</p>
+                <button class="btn btn-primary" onclick="showAuthModal()" style="font-size:0.8rem;padding:8px 16px">Masuk</button>
+            </div>
+            <div class="comment-form" id="commentForm" style="display:none">
+                <textarea id="commentInput" placeholder="Tulis komentar..." maxlength="300"></textarea>
+                <button class="comment-send-btn" onclick="postComment()"><i class="fas fa-paper-plane"></i> Kirim</button>
+            </div>
+            <div class="comment-list" id="commentList"></div>
+        </div>
+    </div>
+    <div class="comment-sidebar-btn" id="commentSidebarBtn" onclick="toggleCommentSidebar()">
+        <i class="fas fa-comments"></i>
+        <span class="comment-badge" id="commentBadge" style="display:none">0</span>
+    </div>
+
     <script src="js/script.js"></script>
 </body>
 </html>

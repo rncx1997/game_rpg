@@ -367,11 +367,13 @@ function handleAuth(e) {
     }
     hideAuthModal();
     updateProfileUI();
+    updateCommentUI();
     showToast('Selamat datang, ' + name + '!');
 }
 function logout() {
     localStorage.removeItem('ternalUser');
     updateProfileUI();
+    updateCommentUI();
     showToast('Berhasil keluar');
 }
 function updateProfileUI() {
@@ -557,3 +559,72 @@ function ensureJoinDate() {
     }
 }
 ensureJoinDate();
+
+// Comment system
+function toggleCommentSidebar() {
+    document.getElementById('commentSidebar').classList.toggle('open');
+}
+function getComments() {
+    return JSON.parse(localStorage.getItem('ternalComments') || '[]');
+}
+function saveComments(comments) {
+    localStorage.setItem('ternalComments', JSON.stringify(comments));
+}
+function renderComments() {
+    const list = document.getElementById('commentList');
+    const comments = getComments();
+    const user = localStorage.getItem('ternalUser');
+    if (comments.length === 0) {
+        list.innerHTML = '<p class="comment-empty">Belum ada komentar</p>';
+    } else {
+        list.innerHTML = comments.map((c, i) => {
+            const initial = c.author.charAt(0).toUpperCase();
+            const isOwner = user === c.author;
+            const deleteBtn = isOwner ? '<button class="comment-delete" onclick="deleteComment(' + i + ')"><i class="fas fa-trash"></i></button>' : '';
+            return '<div class="comment-item"><div class="comment-avatar">' + initial + '</div><div class="comment-body"><div class="comment-meta"><span class="comment-author">' + c.author + '</span><span class="comment-time">' + c.time + ' ' + deleteBtn + '</span></div><div class="comment-text">' + c.text.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</div></div></div>';
+        }).join('');
+        list.scrollTop = list.scrollHeight;
+    }
+    const badge = document.getElementById('commentBadge');
+    if (comments.length > 0) {
+        badge.style.display = 'flex';
+        badge.textContent = comments.length;
+    } else {
+        badge.style.display = 'none';
+    }
+}
+function postComment() {
+    const user = localStorage.getItem('ternalUser');
+    if (!user) { showAuthModal(); return; }
+    const input = document.getElementById('commentInput');
+    const text = input.value.trim();
+    if (!text) return;
+    const comments = getComments();
+    comments.push({ author: user, text: text, time: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) });
+    saveComments(comments);
+    input.value = '';
+    renderComments();
+}
+function deleteComment(index) {
+    const comments = getComments();
+    const user = localStorage.getItem('ternalUser');
+    if (comments[index] && comments[index].author === user) {
+        comments.splice(index, 1);
+        saveComments(comments);
+        renderComments();
+    }
+}
+function updateCommentUI() {
+    const user = localStorage.getItem('ternalUser');
+    const hint = document.getElementById('commentLoginHint');
+    const form = document.getElementById('commentForm');
+    if (user) {
+        hint.style.display = 'none';
+        form.style.display = 'flex';
+    } else {
+        hint.style.display = 'flex';
+        form.style.display = 'none';
+    }
+    renderComments();
+}
+updateCommentUI();

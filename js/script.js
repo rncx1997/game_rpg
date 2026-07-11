@@ -412,6 +412,14 @@ ensureJoinDate();
         navProfileLink.style.display = 'none';
     }
 }
+function loginAsGuest() {
+    const guestName = 'Tamu_' + Math.floor(1000 + Math.random() * 9000);
+    localStorage.setItem('ternalUser', guestName);
+    hideAuthModal();
+    updateProfileUI();
+    updateCommentUI();
+    showToast('Selamat datang, ' + guestName + '!');
+}
 document.getElementById('authModal').addEventListener('click', function(e) {
     if (e.target === this) hideAuthModal();
 });
